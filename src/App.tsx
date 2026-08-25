@@ -1,21 +1,78 @@
+import { useEffect } from "react";
+
+import { mockTemplate } from "./domain/template/template.mock";
 import { useEditorStore } from "./store/editorStore";
 
 function App() {
-  const zoom = useEditorStore((state) => state.zoom);
-  const setZoom = useEditorStore((state) => state.setZoom);
+  const template = useEditorStore((state) => state.template);
+  const selectedBoxId = useEditorStore(
+    (state) => state.selectedBoxId
+  );
+  const isDirty = useEditorStore((state) => state.isDirty);
+
+  const setTemplate = useEditorStore(
+    (state) => state.setTemplate
+  );
+
+  const selectBox = useEditorStore(
+    (state) => state.selectBox
+  );
+
+  const markDirty = useEditorStore(
+    (state) => state.markDirty
+  );
+
+  useEffect(() => {
+    setTemplate(mockTemplate);
+  }, [setTemplate]);
+
+  if (!template) {
+    return <div>Loading template...</div>;
+  }
 
   return (
     <div style={{ padding: "40px" }}>
-      <h1>Template Editor</h1>
+      <h1>{template.name}</h1>
 
-      <p>Zoom: {Math.round(zoom * 100)}%</p>
+      <p>
+        Campaign: {template.campaign}
+      </p>
 
-      <button onClick={() => setZoom(zoom + 0.1)}>
-        Zoom In
-      </button>
+      <p>
+        Boxes: {template.boxes.length}
+      </p>
 
-      <button onClick={() => setZoom(zoom - 0.1)}>
-        Zoom Out
+      <p>
+        Selected box:{" "}
+        {selectedBoxId ?? "None"}
+      </p>
+
+      <p>
+        Status:{" "}
+        {isDirty ? "Unsaved changes" : "Saved"}
+      </p>
+
+      <hr />
+
+      <h2>Layers</h2>
+
+      {template.boxes.map((box) => (
+        <button
+          key={box.id}
+          onClick={() => selectBox(box.id)}
+          style={{
+            display: "block",
+            marginBottom: "8px",
+          }}
+        >
+          {box.type} — {box.id}
+        </button>
+      ))}
+
+      <hr />
+
+      <button onClick={markDirty}>
+        Simulate Change
       </button>
     </div>
   );
