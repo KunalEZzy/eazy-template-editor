@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { mockTemplate } from "./domain/template/template.mock";
 import { useEditorStore } from "./store/editorStore";
+import { CanvasEditor } from "./canvas/CanvasEditor";
 
 function App() {
   const template = useEditorStore(
@@ -68,6 +69,15 @@ function App() {
           ? discountBox.fontSize
           : "N/A"}
       </p>
+
+
+
+      <hr />
+
+      <CanvasEditor
+        width={600}
+        height={800}
+      />
 
       <hr />
 
