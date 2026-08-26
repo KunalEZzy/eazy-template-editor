@@ -1,3 +1,4 @@
+import type { TextBox } from "../domain/box/box.types";
 import type { Template } from "../domain/template/template.types";
 import type { EditorPanel } from "./editor.types";
 
@@ -5,6 +6,11 @@ export interface EditorActions {
   setTemplate: (template: Template) => void;
 
   selectBox: (boxId: string | null) => void;
+
+  updateTextBox: (
+    boxId: string,
+    changes: Partial<Omit<TextBox, "id" | "type">>
+  ) => void;
 
   setZoom: (zoom: number) => void;
 

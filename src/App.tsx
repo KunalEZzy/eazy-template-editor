@@ -4,11 +4,17 @@ import { mockTemplate } from "./domain/template/template.mock";
 import { useEditorStore } from "./store/editorStore";
 
 function App() {
-  const template = useEditorStore((state) => state.template);
+  const template = useEditorStore(
+    (state) => state.template
+  );
+
   const selectedBoxId = useEditorStore(
     (state) => state.selectedBoxId
   );
-  const isDirty = useEditorStore((state) => state.isDirty);
+
+  const isDirty = useEditorStore(
+    (state) => state.isDirty
+  );
 
   const setTemplate = useEditorStore(
     (state) => state.setTemplate
@@ -18,8 +24,8 @@ function App() {
     (state) => state.selectBox
   );
 
-  const markDirty = useEditorStore(
-    (state) => state.markDirty
+  const updateTextBox = useEditorStore(
+    (state) => state.updateTextBox
   );
 
   useEffect(() => {
@@ -29,6 +35,10 @@ function App() {
   if (!template) {
     return <div>Loading template...</div>;
   }
+
+  const discountBox = template.boxes.find(
+    (box) => box.id === "box-discount"
+  );
 
   return (
     <div style={{ padding: "40px" }}>
@@ -52,6 +62,13 @@ function App() {
         {isDirty ? "Unsaved changes" : "Saved"}
       </p>
 
+      <p>
+        Discount font size:{" "}
+        {discountBox?.type === "text"
+          ? discountBox.fontSize
+          : "N/A"}
+      </p>
+
       <hr />
 
       <h2>Layers</h2>
@@ -71,8 +88,14 @@ function App() {
 
       <hr />
 
-      <button onClick={markDirty}>
-        Simulate Change
+      <button
+        onClick={() =>
+          updateTextBox("box-discount", {
+            fontSize: 72,
+          })
+        }
+      >
+        Increase Discount Font
       </button>
     </div>
   );
