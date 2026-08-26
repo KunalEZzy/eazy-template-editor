@@ -1,9 +1,9 @@
 import type { PreviewData } from "./preview.types";
 
 export const mockPreviewData: PreviewData = {
-  resNameNL: "Demo Restaurant",
+  resNameNL: "Punjab Grills",
 
-  resNameL: "Demo Restaurant",
+  resNameL: "Punjab Grills",
 
   discount: "20% OFF",
 
