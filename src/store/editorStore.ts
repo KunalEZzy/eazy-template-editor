@@ -41,6 +41,7 @@ export const useEditorStore = create<
       selectedBoxId,
     }),
 
+
   updateTextBox: (boxId, changes) =>
     set((state) => {
       if (!state.template) {
@@ -72,6 +73,34 @@ export const useEditorStore = create<
         isDirty: true,
       };
     }),
+
+    updateBoxTransform: (boxId, changes) =>
+  set((state) => {
+    if (!state.template) {
+      return state;
+    }
+
+    const boxes = state.template.boxes.map((box) => {
+      if (box.id !== boxId) {
+        return box;
+      }
+
+      return {
+        ...box,
+        ...changes,
+      };
+    });
+
+    return {
+      template: {
+        ...state.template,
+        boxes,
+        updatedAt: new Date().toISOString(),
+      },
+
+      isDirty: true,
+    };
+  }),
 
   setZoom: (zoom) =>
     set({

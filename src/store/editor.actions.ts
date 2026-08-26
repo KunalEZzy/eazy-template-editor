@@ -12,6 +12,17 @@ export interface EditorActions {
     changes: Partial<Omit<TextBox, "id" | "type">>
   ) => void;
 
+  updateBoxTransform: (
+    boxId: string,
+    changes: {
+        x?: number;
+        y?: number;
+        width?: number;
+        height?: number;
+        rotation?: number;
+    }
+  ) => void;
+
   setZoom: (zoom: number) => void;
 
   setPan: (x: number, y: number) => void;
