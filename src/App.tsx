@@ -15,6 +15,7 @@ const editorService = new EditorService(
 );
 
 const TEMPLATE_ID = mockTemplate.id;
+const RESET_TEMPLATE_FOR_TEST = false;
 
 function App() {
   const template = useEditorStore(
@@ -53,29 +54,15 @@ function App() {
     (state) => state.setError
   );
 
-  // useEffect(() => {
-  //   async function loadTemplate() {
-  //     try {
-  //       const template =
-  //         await editorService.loadTemplate(
-  //           TEMPLATE_ID
-  //         );
-
-  //       setTemplate(template);
-  //     } catch (error) {
-  //       console.error(
-  //         "Failed to load template:",
-  //         error
-  //       );
-  //     }
-  //   }
-
-  //   loadTemplate();
-  // }, [setTemplate]);
-
-  useEffect(() => {
+useEffect(() => {
   async function loadTemplate() {
     try {
+      if (RESET_TEMPLATE_FOR_TEST) {
+        localStorage.removeItem(
+          "eazy-template-editor:templates"
+        );
+      }
+
       const template =
         await editorService.loadTemplate(
           TEMPLATE_ID
@@ -115,10 +102,17 @@ function App() {
       setSaving(true);
       setError(null);
 
+      console.log("TEMPLATE BEING SAVED:", template);
+
       const savedTemplate =
         await editorService.saveTemplate(
           template
         );
+
+      console.log(
+        "TEMPLATE RETURNED FROM SAVE:",
+        savedTemplate
+      );
 
       setTemplate(savedTemplate);
     } catch (error) {
