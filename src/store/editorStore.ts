@@ -5,6 +5,8 @@ import type { EditorState } from "./editor.types";
 
 const initialState: EditorState = {
   template: null,
+  
+  templateLoadVersion: 0,
 
   selectedBoxId: null,
 
@@ -29,12 +31,18 @@ export const useEditorStore = create<
   ...initialState,
 
   setTemplate: (template) =>
-    set({
-      template,
-      selectedBoxId: null,
-      isDirty: false,
-      error: null,
-    }),
+  set((state) => ({
+    template,
+
+    templateLoadVersion:
+      state.templateLoadVersion + 1,
+
+    selectedBoxId: null,
+
+    isDirty: false,
+
+    error: null,
+  })),
 
   selectBox: (selectedBoxId) =>
     set({

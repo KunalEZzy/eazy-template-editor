@@ -9,11 +9,16 @@ export type EditorPanel =
 export interface EditorState {
   template: Template | null;
 
+  // Changes only when a template is loaded/replaced.
+  // It does NOT change for normal box movement/resizing.
+  templateLoadVersion: number;
+
   selectedBoxId: string | null;
 
   zoom: number;
 
   panX: number;
+
   panY: number;
 
   activePanel: EditorPanel;
@@ -21,6 +26,7 @@ export interface EditorState {
   isDirty: boolean;
 
   isLoading: boolean;
+
   isSaving: boolean;
 
   error: string | null;

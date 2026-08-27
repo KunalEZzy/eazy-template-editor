@@ -1,6 +1,6 @@
 import { Textbox } from "fabric";
 
-import type { TextBox as DomainTextBox } from "../domain/box/box.types";
+import type { TextBox } from "../domain/box/box.types";
 import type { PreviewData } from "../domain/variables/preview.types";
 import { resolveTextVariable } from "../domain/variables/previewResolver";
 
@@ -13,65 +13,109 @@ export function percentageToPixels(
   percentage: number,
   totalPixels: number
 ): number {
-  return (percentage / 100) * totalPixels;
+  return (
+    (percentage / 100) *
+    totalPixels
+  );
 }
 
 export function pixelsToPercentage(
   pixels: number,
   totalPixels: number
 ): number {
-  return (pixels / totalPixels) * 100;
+  return (
+    (pixels / totalPixels) *
+    100
+  );
 }
 
 export function textBoxToFabric(
-  box: DomainTextBox,
+  box: TextBox,
   previewData: PreviewData,
   canvasSize: CanvasSize
 ): Textbox {
-  const left = percentageToPixels(
-    box.x,
-    canvasSize.width
-  );
+  const left =
+    percentageToPixels(
+      box.x,
+      canvasSize.width
+    );
 
-  const top = percentageToPixels(
-    box.y,
-    canvasSize.height
-  );
+  const top =
+    percentageToPixels(
+      box.y,
+      canvasSize.height
+    );
 
-  const textValue = resolveTextVariable(
-    box.variable,
-    previewData
-  );
+  const boxWidth =
+    percentageToPixels(
+      box.width,
+      canvasSize.width
+    );
 
-  const text = new Textbox(
-    textValue,
-    {
-      left,
-      top,
+  const textValue =
+    resolveTextVariable(
+      box.variable,
+      previewData
+    );
 
-      width: percentageToPixels(
-        box.width,
-        canvasSize.width
-      ),
+  const text =
+    new Textbox(
+      textValue,
+      {
+        left,
+        top,
 
-      fontFamily: box.fontFamily,
-      fontSize: box.fontSize,
-      fontWeight: box.fontWeight,
+        width: boxWidth,
 
-      fill: box.color,
+        fontFamily:
+          box.fontFamily,
 
-      angle: box.rotation,
-      opacity: box.opacity,
+        fontSize:
+          box.fontSize,
 
-      textAlign: box.textAlign,
+        fontWeight:
+          box.fontWeight,
 
-      selectable: !box.locked,
-      visible: box.visible,
+        fill:
+          box.color,
 
-      originX: "left",
-      originY: "top",
-    }
-  );
+        angle:
+          box.rotation,
+
+        opacity:
+          box.opacity,
+
+        textAlign:
+          box.textAlign,
+
+        selectable:
+          !box.locked,
+
+        visible:
+          box.visible,
+
+        originX: "left",
+        originY: "top",
+
+        splitByGrapheme:
+          false,
+      }
+    );
+
+  /*
+   * Domain width is the source
+   * of truth.
+   */
+  text.set({
+    width: boxWidth,
+    scaleX: 1,
+    scaleY: 1,
+
+    left,
+    top,
+  });
+
+  text.setCoords();
 
   text.set({
     data: {
