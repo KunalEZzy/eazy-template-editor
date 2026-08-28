@@ -13,6 +13,8 @@ export interface EditorState {
   // It does NOT change for normal box movement/resizing.
   templateLoadVersion: number;
 
+  temporaryBackgroundImageUrl: string | null;
+
   selectedBoxId: string | null;
 
   zoom: number;

@@ -8,6 +8,8 @@ const initialState: EditorState = {
 
   templateLoadVersion: 0,
 
+  temporaryBackgroundImageUrl: null,
+
   selectedBoxId: null,
 
   zoom: 1,
@@ -119,6 +121,12 @@ export const useEditorStore = create<
     set({
       panX,
       panY,
+    }),
+
+    setTemporaryBackgroundImage: (imageUrl) =>
+    set({
+        temporaryBackgroundImageUrl: imageUrl,
+        isDirty: true,
     }),
 
   setActivePanel: (activePanel) =>

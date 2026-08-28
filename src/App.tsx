@@ -15,7 +15,7 @@ const editorService = new EditorService(
 );
 
 const TEMPLATE_ID = mockTemplate.id;
-const RESET_TEMPLATE_FOR_TEST = false;
+const RESET_TEMPLATE_FOR_TEST = true;
 
 function App() {
   const template = useEditorStore(
