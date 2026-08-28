@@ -215,6 +215,7 @@ function App() {
 
   return (
     <div
+      className={isDark ? "theme-dark" : "theme-light"}
       style={{
         display: "flex",
         flexDirection: "column",
