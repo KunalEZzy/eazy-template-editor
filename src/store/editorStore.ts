@@ -5,7 +5,7 @@ import type { EditorState } from "./editor.types";
 
 const initialState: EditorState = {
   template: null,
-  
+
   templateLoadVersion: 0,
 
   selectedBoxId: null,
@@ -20,6 +20,7 @@ const initialState: EditorState = {
   isDirty: false,
 
   isLoading: false,
+
   isSaving: false,
 
   error: null,
@@ -31,24 +32,23 @@ export const useEditorStore = create<
   ...initialState,
 
   setTemplate: (template) =>
-  set((state) => ({
-    template,
+    set((state) => ({
+      template,
 
-    templateLoadVersion:
-      state.templateLoadVersion + 1,
+      templateLoadVersion:
+        state.templateLoadVersion + 1,
 
-    selectedBoxId: null,
+      selectedBoxId: null,
 
-    isDirty: false,
+      isDirty: false,
 
-    error: null,
-  })),
+      error: null,
+    })),
 
   selectBox: (selectedBoxId) =>
     set({
       selectedBoxId,
     }),
-
 
   updateTextBox: (boxId, changes) =>
     set((state) => {
@@ -82,33 +82,33 @@ export const useEditorStore = create<
       };
     }),
 
-    updateBoxTransform: (boxId, changes) =>
-  set((state) => {
-    if (!state.template) {
-      return state;
-    }
-
-    const boxes = state.template.boxes.map((box) => {
-      if (box.id !== boxId) {
-        return box;
+  updateBoxTransform: (boxId, changes) =>
+    set((state) => {
+      if (!state.template) {
+        return state;
       }
 
+      const boxes = state.template.boxes.map((box) => {
+        if (box.id !== boxId) {
+          return box;
+        }
+
+        return {
+          ...box,
+          ...changes,
+        };
+      });
+
       return {
-        ...box,
-        ...changes,
+        template: {
+          ...state.template,
+          boxes,
+          updatedAt: new Date().toISOString(),
+        },
+
+        isDirty: true,
       };
-    });
-
-    return {
-      template: {
-        ...state.template,
-        boxes,
-        updatedAt: new Date().toISOString(),
-      },
-
-      isDirty: true,
-    };
-  }),
+    }),
 
   setZoom: (zoom) =>
     set({

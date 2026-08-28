@@ -84,6 +84,12 @@ export function CanvasEditor({
 
   // --------------------------------------------------
   // 2. Render template objects
+  //
+  // IMPORTANT:
+  // This effect is ONLY for loading/rebuilding
+  // Fabric objects.
+  //
+  // Do NOT depend on `template` here.
   // --------------------------------------------------
 
   useEffect(() => {
@@ -122,7 +128,121 @@ export function CanvasEditor({
   ]);
 
   // --------------------------------------------------
-  // 3. Selection events
+    // 2.5. Sync template properties to existing Fabric objects
+    // --------------------------------------------------
+
+    useEffect(() => {
+    const canvas = fabricCanvasRef.current;
+
+    if (!canvas) {
+        return;
+    }
+
+    template.boxes.forEach((box) => {
+        if (box.type !== "text") {
+        return;
+        }
+
+        const fabricObject = canvas
+        .getObjects()
+        .find(
+            (object) =>
+            object.get("data")?.boxId === box.id
+        );
+
+        if (!fabricObject) {
+        return;
+        }
+
+        fabricObject.set({
+        fontSize: box.fontSize,
+        fontFamily: box.fontFamily,
+        fontWeight: box.fontWeight,
+        fill: box.color,
+        textAlign: box.textAlign,
+        });
+
+        fabricObject.setCoords();
+    });
+
+    canvas.renderAll();
+    }, [template]);
+
+  // --------------------------------------------------
+  // 3. Sync Zustand -> existing Fabric objects
+  //
+  // This is used by the Properties Panel.
+  //
+  // IMPORTANT:
+  // We DO NOT call canvas.clear().
+  // We update existing Fabric objects in place.
+  // --------------------------------------------------
+
+  useEffect(() => {
+    const canvas = fabricCanvasRef.current;
+
+    if (!canvas) {
+      return;
+    }
+
+    template.boxes.forEach((box) => {
+      if (box.type !== "text") {
+        return;
+      }
+
+      const fabricObject =
+        canvas
+          .getObjects()
+          .find(
+            (object) =>
+              object
+                .get("data")
+                ?.boxId === box.id
+          );
+
+      if (!fabricObject) {
+        return;
+      }
+
+      const newLeft =
+        percentageToPixels(
+          box.x,
+          width
+        );
+
+      const newTop =
+        percentageToPixels(
+          box.y,
+          height
+        );
+
+      const newWidth =
+        percentageToPixels(
+          box.width,
+          width
+        );
+
+      fabricObject.set({
+        left: newLeft,
+        top: newTop,
+        width: newWidth,
+        angle: box.rotation,
+        opacity: box.opacity,
+        scaleX: 1,
+      });
+
+      fabricObject.setCoords();
+    });
+
+    canvas.renderAll();
+  }, [
+    template,
+    width,
+    height,
+  ]);
+
+  // --------------------------------------------------
+  // 4. Selection events
   // --------------------------------------------------
 
   useEffect(() => {
@@ -190,7 +310,7 @@ export function CanvasEditor({
   }, [selectBox]);
 
   // --------------------------------------------------
-  // 4. Mouse movement + resize
+  // 5. Mouse movement + resize
   // --------------------------------------------------
 
   useEffect(() => {
@@ -251,18 +371,6 @@ export function CanvasEditor({
       object.setCoords();
 
       // ----------------------------------------------
-      // POSITION CHANGES
-      // ----------------------------------------------
-
-      updateBoxTransform(
-        boxId,
-        {
-          x,
-          y,
-        }
-      );
-
-      // ----------------------------------------------
       // TEXTBOX RESIZE
       // ----------------------------------------------
 
@@ -281,36 +389,14 @@ export function CanvasEditor({
         const currentFontSize =
           object.fontSize ?? 16;
 
-        /*
-         * Fabric resizing can happen in
-         * two different ways.
-         *
-         * SIDE HANDLE:
-         *
-         *   width changes
-         *   scaleX ~= 1
-         *   scaleY ~= 1
-         *
-         * CORNER HANDLE:
-         *
-         *   width stays roughly the same
-         *   scaleX changes
-         *   scaleY changes
-         *
-         * We normalize both cases.
-         */
-
         const isScaled =
           Math.abs(scaleX - 1) > 0.0001 ||
           Math.abs(scaleY - 1) > 0.0001;
 
         if (isScaled) {
-          /*
-           * Corner resize.
-           *
-           * Convert Fabric scale into
-           * actual application dimensions.
-           */
+          // ------------------------------------------
+          // CORNER HANDLE RESIZE
+          // ------------------------------------------
 
           const actualWidth =
             currentWidth * scaleX;
@@ -324,9 +410,6 @@ export function CanvasEditor({
               width
             );
 
-          /*
-           * Persist width.
-           */
           updateBoxTransform(
             boxId,
             {
@@ -336,9 +419,6 @@ export function CanvasEditor({
             }
           );
 
-          /*
-           * Persist visual font size.
-           */
           updateTextBox(
             boxId,
             {
@@ -347,12 +427,7 @@ export function CanvasEditor({
             }
           );
 
-          /*
-           * Normalize Fabric.
-           *
-           * After this Fabric has no
-           * hidden scale.
-           */
+          // Remove Fabric's temporary scale.
           object.set({
             width: actualWidth,
             fontSize:
@@ -363,14 +438,9 @@ export function CanvasEditor({
 
           object.setCoords();
         } else {
-          /*
-           * Side resize.
-           *
-           * Fabric has already changed
-           * the textbox width.
-           *
-           * Font size stays unchanged.
-           */
+          // ------------------------------------------
+          // SIDE HANDLE RESIZE
+          // ------------------------------------------
 
           const actualWidth =
             object.width ?? 0;
@@ -390,6 +460,7 @@ export function CanvasEditor({
             }
           );
 
+          // Keep the normalized state.
           object.set({
             scaleX: 1,
             scaleY: 1,
@@ -397,10 +468,6 @@ export function CanvasEditor({
 
           object.setCoords();
         }
-
-        // --------------------------------------------
-        // Diagnostic
-        // --------------------------------------------
 
         if (
           boxId === "box-discount"
@@ -413,18 +480,27 @@ export function CanvasEditor({
                   object.width ?? 0,
                   width
                 ),
-
               fontSize:
                 object.fontSize,
-
               scaleX:
                 object.scaleX,
-
               scaleY:
                 object.scaleY,
             }
           );
         }
+      } else {
+        // --------------------------------------------
+        // NON-TEXTBOX TRANSFORM
+        // --------------------------------------------
+
+        updateBoxTransform(
+          boxId,
+          {
+            x,
+            y,
+          }
+        );
       }
     };
 
@@ -446,157 +522,151 @@ export function CanvasEditor({
     height,
   ]);
 
-
-// --------------------------------------------------
-// 5. Keyboard movement
-// --------------------------------------------------
-
-// --------------------------------------------------
-// 5. Keyboard movement
-// --------------------------------------------------
+  // --------------------------------------------------
+  // 6. Keyboard movement
+  // --------------------------------------------------
 
   useEffect(() => {
     const handleKeyDown = (
-        event: KeyboardEvent
+      event: KeyboardEvent
     ) => {
-        if (!selectedBoxId) {
+      if (!selectedBoxId) {
         return;
-        }
+      }
 
-        const isArrowKey =
+      const isArrowKey =
         event.key === "ArrowLeft" ||
         event.key === "ArrowRight" ||
         event.key === "ArrowUp" ||
         event.key === "ArrowDown";
 
-        if (!isArrowKey) {
+      if (!isArrowKey) {
         return;
-        }
+      }
 
-        // Stop browser page scrolling.
-        event.preventDefault();
+      // Prevent browser scrolling.
+      event.preventDefault();
 
-        const stepPixels =
+      const stepPixels =
         event.shiftKey ? 10 : 1;
 
-        let deltaX = 0;
-        let deltaY = 0;
+      let deltaX = 0;
+      let deltaY = 0;
 
-        switch (event.key) {
+      switch (event.key) {
         case "ArrowLeft":
-            deltaX = -stepPixels;
-            break;
+          deltaX = -stepPixels;
+          break;
 
         case "ArrowRight":
-            deltaX = stepPixels;
-            break;
+          deltaX = stepPixels;
+          break;
 
         case "ArrowUp":
-            deltaY = -stepPixels;
-            break;
+          deltaY = -stepPixels;
+          break;
 
         case "ArrowDown":
-            deltaY = stepPixels;
-            break;
-        }
+          deltaY = stepPixels;
+          break;
+      }
 
-        const deltaXPercentage =
+      const deltaXPercentage =
         pixelsToPercentage(
-            deltaX,
-            width
+          deltaX,
+          width
         );
 
-        const deltaYPercentage =
+      const deltaYPercentage =
         pixelsToPercentage(
-            deltaY,
-            height
+          deltaY,
+          height
         );
 
-        // IMPORTANT:
-        // Always read the latest template.
-        const currentBox =
+      // Always use the latest template.
+      const currentBox =
         templateRef.current.boxes.find(
-            (box) =>
+          (box) =>
             box.id === selectedBoxId
         );
 
-        if (!currentBox) {
+      if (!currentBox) {
         return;
-        }
+      }
 
-        let newX =
+      let newX =
         currentBox.x +
         deltaXPercentage;
 
-        let newY =
+      let newY =
         currentBox.y +
         deltaYPercentage;
 
-        newX = Math.max(0, newX);
-        newY = Math.max(0, newY);
+      newX = Math.max(0, newX);
+      newY = Math.max(0, newY);
 
-        const fabricObject =
+      const fabricObject =
         fabricCanvasRef.current
-            ?.getObjects()
-            .find(
+          ?.getObjects()
+          .find(
             (object) =>
-                object
+              object
                 .get("data")
                 ?.boxId ===
-                selectedBoxId
-            );
+              selectedBoxId
+          );
 
-        if (fabricObject) {
+      if (fabricObject) {
         fabricObject.set({
-            left:
+          left:
             percentageToPixels(
-                newX,
-                width
+              newX,
+              width
             ),
 
-            top:
+          top:
             percentageToPixels(
-                newY,
-                height
+              newY,
+              height
             ),
         });
 
         fabricObject.setCoords();
 
         fabricCanvasRef.current?.renderAll();
-        }
+      }
 
-        updateBoxTransform(
+      updateBoxTransform(
         selectedBoxId,
         {
-            x: newX,
-            y: newY,
+          x: newX,
+          y: newY,
         }
-        );
+      );
     };
 
     window.addEventListener(
-        "keydown",
-        handleKeyDown
+      "keydown",
+      handleKeyDown
     );
 
     return () => {
-        window.removeEventListener(
+      window.removeEventListener(
         "keydown",
         handleKeyDown
-        );
+      );
     };
-    }, [
+  }, [
     selectedBoxId,
     updateBoxTransform,
     width,
     height,
-    ]);
+  ]);
 
   return (
     <canvas
       ref={canvasElementRef}
-      tabIndex = {0}
+      tabIndex={0}
     />
   );
 }
