@@ -57,6 +57,12 @@ export function CanvasEditor({
     (state) => state.templateLoadVersion
   );
 
+  const temporaryBackgroundImageUrl =
+  useEditorStore(
+    (state) =>
+      state.temporaryBackgroundImageUrl
+  );
+
   // --------------------------------------------------
   // 1. Fabric canvas lifecycle
   // --------------------------------------------------
@@ -168,92 +174,136 @@ export function CanvasEditor({
     canvas.renderAll();
     }, [template]);
 
-    // --------------------------------------------------
-// 2.1. Render background image
+// --------------------------------------------------
+// 2.1. Sync background image
+//
+// IMPORTANT:
+// This effect only changes the background.
+// It does NOT rebuild the template objects.
 // --------------------------------------------------
 
-useEffect(() => {
-  const canvasInstance =
-    fabricCanvasRef.current;
+  useEffect(() => {
+    const canvas =
+        fabricCanvasRef.current;
 
-  if (canvasInstance === null) {
-    return;
-  }
-
-  const backgroundUrl =
-    template.background.imageUrl;
-    console.log("BACKGROUND URL:", backgroundUrl);
-
-  if (backgroundUrl === null) {
-    return;
-  }
-
-  const canvas = canvasInstance;
-  const imageUrl = backgroundUrl;
-
-  let cancelled = false;
-
-  async function loadBackground() {
-    try {
-      const image =
-        await Image.fromURL(imageUrl);
-
-      if (cancelled) {
+    if (!canvas) {
         return;
-      }
-
-      const imageWidth =
-        image.width ?? width;
-
-      const imageHeight =
-        image.height ?? height;
-
-      const scaleX =
-        width / imageWidth;
-
-      const scaleY =
-        height / imageHeight;
-
-      const scale =
-        Math.max(scaleX, scaleY);
-
-      image.set({
-        left: 0,
-        top: 0,
-
-        scaleX: scale,
-        scaleY: scale,
-
-        selectable: false,
-        evented: false,
-
-        originX: "left",
-        originY: "top",
-      });
-
-      canvas.add(image);
-
-      canvas.sendObjectToBack(image);
-
-      canvas.renderAll();
-    } catch (error) {
-      console.error(
-        "Failed to load background image:",
-        error
-      );
     }
-  }
 
-  loadBackground();
+    const backgroundUrl =
+        temporaryBackgroundImageUrl ??
+        template.background.imageUrl;
 
-  return () => {
-    cancelled = true;
-  };
-}, [
-  template.background.imageUrl,
-  width,
-  height,
-]);
+    let cancelled = false;
+
+    const existingBackground =
+        canvas
+        .getObjects()
+        .find(
+            (object) =>
+            object.get("data")?.isBackground === true
+        );
+
+    if (existingBackground) {
+        canvas.remove(existingBackground);
+    }
+
+    if (!backgroundUrl) {
+        canvas.renderAll();
+        return;
+    }
+
+    // At this point TypeScript knows that
+    // backgroundUrl is a string.
+    const imageUrl: string =
+        backgroundUrl;
+
+    // Keep a stable reference to the
+    // already-validated Fabric canvas.
+    const fabricCanvas = canvas;
+
+    async function loadBackground() {
+        try {
+        const image =
+            await Image.fromURL(imageUrl);
+
+        if (cancelled) {
+            return;
+        }
+
+        const imageWidth =
+            image.width ?? width;
+
+        const imageHeight =
+            image.height ?? height;
+
+        if (
+            imageWidth <= 0 ||
+            imageHeight <= 0
+        ) {
+            return;
+        }
+
+        const scaleX =
+            width / imageWidth;
+
+        const scaleY =
+            height / imageHeight;
+
+        const scale =
+            Math.max(scaleX, scaleY);
+
+        image.set({
+            left: 0,
+            top: 0,
+
+            scaleX: scale,
+            scaleY: scale,
+
+            selectable: false,
+            evented: false,
+
+            originX: "left",
+            originY: "top",
+
+            data: {
+            isBackground: true,
+            },
+        });
+
+        if (cancelled) {
+            return;
+        }
+
+        fabricCanvas.add(image);
+
+        fabricCanvas.sendObjectToBack(
+            image
+        );
+
+        fabricCanvas.renderAll();
+        } catch (error) {
+        if (!cancelled) {
+            console.error(
+            "Failed to load background image:",
+            error
+            );
+        }
+        }
+    }
+
+    loadBackground();
+
+    return () => {
+        cancelled = true;
+    };
+    }, [
+    temporaryBackgroundImageUrl,
+    template.background.imageUrl,
+    width,
+    height,
+    ]);
+
 
   // --------------------------------------------------
   // 3. Sync Zustand -> existing Fabric objects
