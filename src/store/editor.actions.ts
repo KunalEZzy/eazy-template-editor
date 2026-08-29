@@ -18,6 +18,10 @@ export interface EditorActions {
     >
   ) => void;
 
+  setTemporaryBackgroundImage: (
+    imageUrl: string | null
+  ) => void;
+
   updateBoxTransform: (
     boxId: string,
     changes: {

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Canvas } from "fabric";
+import { Canvas, Image } from "fabric";
 
 import type { Template } from "../domain/template/template.types";
 import type { PreviewData } from "../domain/variables/preview.types";
@@ -167,6 +167,93 @@ export function CanvasEditor({
 
     canvas.renderAll();
     }, [template]);
+
+    // --------------------------------------------------
+// 2.1. Render background image
+// --------------------------------------------------
+
+useEffect(() => {
+  const canvasInstance =
+    fabricCanvasRef.current;
+
+  if (canvasInstance === null) {
+    return;
+  }
+
+  const backgroundUrl =
+    template.background.imageUrl;
+    console.log("BACKGROUND URL:", backgroundUrl);
+
+  if (backgroundUrl === null) {
+    return;
+  }
+
+  const canvas = canvasInstance;
+  const imageUrl = backgroundUrl;
+
+  let cancelled = false;
+
+  async function loadBackground() {
+    try {
+      const image =
+        await Image.fromURL(imageUrl);
+
+      if (cancelled) {
+        return;
+      }
+
+      const imageWidth =
+        image.width ?? width;
+
+      const imageHeight =
+        image.height ?? height;
+
+      const scaleX =
+        width / imageWidth;
+
+      const scaleY =
+        height / imageHeight;
+
+      const scale =
+        Math.max(scaleX, scaleY);
+
+      image.set({
+        left: 0,
+        top: 0,
+
+        scaleX: scale,
+        scaleY: scale,
+
+        selectable: false,
+        evented: false,
+
+        originX: "left",
+        originY: "top",
+      });
+
+      canvas.add(image);
+
+      canvas.sendObjectToBack(image);
+
+      canvas.renderAll();
+    } catch (error) {
+      console.error(
+        "Failed to load background image:",
+        error
+      );
+    }
+  }
+
+  loadBackground();
+
+  return () => {
+    cancelled = true;
+  };
+}, [
+  template.background.imageUrl,
+  width,
+  height,
+]);
 
   // --------------------------------------------------
   // 3. Sync Zustand -> existing Fabric objects

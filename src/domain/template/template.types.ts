@@ -1,5 +1,6 @@
 import type {Box} from "../box/box.types";
 
+
 export interface Template {
   id: string;
   name: string;
