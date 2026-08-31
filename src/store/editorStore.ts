@@ -2,9 +2,28 @@ import { create } from "zustand";
 
 import type { EditorActions } from "./editor.actions";
 import type { EditorState } from "./editor.types";
-import type { TextBox, QRBox, } from "../domain/box/box.types";
-import type { TextVariable, QRVariable, } from "../domain/variables/variables.types";
-import { VARIABLE_DEFINITIONS, } from "../domain/variables/variable.definitions";
+
+import type {
+  TextBox,
+  QRBox,
+} from "../domain/box/box.types";
+
+import type {
+  TextVariable,
+  QRVariable,
+} from "../domain/variables/variables.types";
+
+import {
+  VARIABLE_DEFINITIONS,
+} from "../domain/variables/variable.definitions";
+
+import {
+  VARIABLE_DEFAULTS,
+} from "../domain/variables/variable.defaults";
+
+import {
+  findAvailableBoxPlacement,
+} from "../editor/placement/boxPlacement";
 
 const initialState: EditorState = {
   template: null,
@@ -36,6 +55,10 @@ export const useEditorStore = create<
 >((set) => ({
   ...initialState,
 
+  // --------------------------------------------------
+  // Template
+  // --------------------------------------------------
+
   setTemplate: (template) =>
     set((state) => ({
       template,
@@ -50,10 +73,18 @@ export const useEditorStore = create<
       error: null,
     })),
 
+  // --------------------------------------------------
+  // Selection
+  // --------------------------------------------------
+
   selectBox: (selectedBoxId) =>
     set({
       selectedBoxId,
     }),
+
+  // --------------------------------------------------
+  // Text Box
+  // --------------------------------------------------
 
   updateTextBox: (boxId, changes) =>
     set((state) => {
@@ -61,100 +92,127 @@ export const useEditorStore = create<
         return state;
       }
 
-      const boxes = state.template.boxes.map((box) => {
-        if (box.id !== boxId) {
-          return box;
-        }
+      const boxes =
+        state.template.boxes.map(
+          (box) => {
+            if (box.id !== boxId) {
+              return box;
+            }
 
-        if (box.type !== "text") {
-          return box;
-        }
+            if (box.type !== "text") {
+              return box;
+            }
 
-        return {
-          ...box,
-          ...changes,
-        };
-      });
+            return {
+              ...box,
+              ...changes,
+            };
+          }
+        );
 
       return {
         template: {
           ...state.template,
           boxes,
-          updatedAt: new Date().toISOString(),
+          updatedAt:
+            new Date().toISOString(),
         },
 
         isDirty: true,
       };
     }),
 
-    updateQRBox: (boxId, changes) =>
-  set((state) => {
-    if (!state.template) {
-      return state;
-    }
+  // --------------------------------------------------
+  // QR Box
+  // --------------------------------------------------
 
-    const boxes =
-      state.template.boxes.map(
-        (box) => {
-          if (box.id !== boxId) {
-            return box;
-          }
-
-          if (box.type !== "qr") {
-            return box;
-          }
-
-          return {
-            ...box,
-            ...changes,
-          };
-        }
-      );
-
-    return {
-      template: {
-        ...state.template,
-        boxes,
-        updatedAt:
-          new Date().toISOString(),
-      },
-
-      isDirty: true,
-    };
-  }),
-
-  updateBoxTransform: (boxId, changes) =>
+  updateQRBox: (boxId, changes) =>
     set((state) => {
       if (!state.template) {
         return state;
       }
 
-      const boxes = state.template.boxes.map((box) => {
-        if (box.id !== boxId) {
-          return box;
-        }
+      const boxes =
+        state.template.boxes.map(
+          (box) => {
+            if (box.id !== boxId) {
+              return box;
+            }
 
-        return {
-          ...box,
-          ...changes,
-        };
-      });
+            if (box.type !== "qr") {
+              return box;
+            }
+
+            return {
+              ...box,
+              ...changes,
+            };
+          }
+        );
 
       return {
         template: {
           ...state.template,
           boxes,
-          updatedAt: new Date().toISOString(),
+          updatedAt:
+            new Date().toISOString(),
         },
 
         isDirty: true,
       };
     }),
 
+  // --------------------------------------------------
+  // Generic Box Transform
+  // --------------------------------------------------
+
+  updateBoxTransform: (
+    boxId,
+    changes
+  ) =>
+    set((state) => {
+      if (!state.template) {
+        return state;
+      }
+
+      const boxes =
+        state.template.boxes.map(
+          (box) => {
+            if (box.id !== boxId) {
+              return box;
+            }
+
+            return {
+              ...box,
+              ...changes,
+            };
+          }
+        );
+
+      return {
+        template: {
+          ...state.template,
+          boxes,
+          updatedAt:
+            new Date().toISOString(),
+        },
+
+        isDirty: true,
+      };
+    }),
+
+  // --------------------------------------------------
+  // Zoom
+  // --------------------------------------------------
+
   setZoom: (zoom) =>
     set({
       zoom,
     }),
+
+  // --------------------------------------------------
+  // Pan
+  // --------------------------------------------------
 
   setPan: (panX, panY) =>
     set({
@@ -162,17 +220,34 @@ export const useEditorStore = create<
       panY,
     }),
 
-    setTemporaryBackgroundImage: (imageUrl) =>
+  // --------------------------------------------------
+  // Temporary Background
+  // --------------------------------------------------
+
+  setTemporaryBackgroundImage: (
+    imageUrl
+  ) =>
     set({
-        temporaryBackgroundImageUrl: imageUrl,
-        isDirty: true,
+      temporaryBackgroundImageUrl:
+        imageUrl,
+
+      isDirty: true,
     }),
 
+  // --------------------------------------------------
+  // Active Panel
+  // --------------------------------------------------
 
-  setActivePanel: (activePanel) =>
+  setActivePanel: (
+    activePanel
+  ) =>
     set({
       activePanel,
     }),
+
+  // --------------------------------------------------
+  // Dirty State
+  // --------------------------------------------------
 
   markDirty: () =>
     set({
@@ -184,33 +259,57 @@ export const useEditorStore = create<
       isDirty: false,
     }),
 
+  // --------------------------------------------------
+  // Loading
+  // --------------------------------------------------
+
   setLoading: (isLoading) =>
     set({
       isLoading,
     }),
+
+  // --------------------------------------------------
+  // Saving
+  // --------------------------------------------------
 
   setSaving: (isSaving) =>
     set({
       isSaving,
     }),
 
+  // --------------------------------------------------
+  // Error
+  // --------------------------------------------------
+
   setError: (error) =>
     set({
       error,
     }),
+
+  // --------------------------------------------------
+  // Reset
+  // --------------------------------------------------
 
   resetEditor: () =>
     set({
       ...initialState,
     }),
 
-      addVariable: (
+  // --------------------------------------------------
+  // Add Variable
+  // --------------------------------------------------
+
+  addVariable: (
     variable: TextVariable | QRVariable
   ) =>
     set((state) => {
       if (!state.template) {
         return state;
       }
+
+      // ----------------------------------------------
+      // Find variable definition
+      // ----------------------------------------------
 
       const variableDefinition =
         VARIABLE_DEFINITIONS.find(
@@ -222,81 +321,200 @@ export const useEditorStore = create<
         return state;
       }
 
-      const boxId = `box-${variable}-${Date.now()}`;
+      // ----------------------------------------------
+      // Find variable defaults
+      // ----------------------------------------------
+
+      const variableDefaults =
+        VARIABLE_DEFAULTS[variable];
+
+      if (!variableDefaults) {
+        return state;
+      }
+
+      // ----------------------------------------------
+      // Generate unique box ID
+      // ----------------------------------------------
+
+      const boxId =
+        `box-${variable}-${Date.now()}`;
+
+      // ----------------------------------------------
+      // Existing boxes
+      // ----------------------------------------------
 
       const existingBoxes =
         state.template.boxes;
 
+      // ----------------------------------------------
+      // Calculate highest z-index
+      // ----------------------------------------------
+
       const highestZIndex =
         existingBoxes.reduce(
           (max, box) =>
-            Math.max(max, box.zIndex),
+            Math.max(
+              max,
+              box.zIndex
+            ),
           0
         );
 
-      const baseBox = {
-        id: boxId,
+      // ----------------------------------------------
+      // Find available position
+      // ----------------------------------------------
 
-        x: 10,
-        y: 10,
+      const placement =
+        findAvailableBoxPlacement(
+          existingBoxes,
+          {
+            x: variableDefaults.x,
+            y: variableDefaults.y,
+          },
+          variableDefaults.width,
+          variableDefaults.height
+        );
 
-        width: 30,
-        height: 10,
+      // ----------------------------------------------
+      // Create new box
+      // ----------------------------------------------
 
-        rotation: 0,
-        opacity: 1,
+      let newBox:
+        | TextBox
+        | QRBox;
 
-        zIndex: highestZIndex + 1,
+      // ----------------------------------------------
+      // TEXT VARIABLE
+      // ----------------------------------------------
 
-        locked: false,
-        visible: true,
-      };
+      if (
+        variableDefinition.type ===
+        "text"
+      ) {
+        if (
+          variableDefaults.type !==
+          "text"
+        ) {
+          return state;
+        }
 
-      let newBox: TextBox | QRBox;
-
-      if (variableDefinition.type === "text") {
         newBox = {
-          ...baseBox,
+          id: boxId,
 
           type: "text",
 
-          variable: variableDefinition.key,
+          variable:
+            variableDefinition.key,
 
-          fontFamily: "Arial",
-          fontSize: 32,
-          fontWeight: 400,
+          x: placement.x,
 
-          color: "#000000",
+          y: placement.y,
 
-          textAlign: "left",
+          width:
+            variableDefaults.width,
 
-          textTransform: "none",
+          height:
+            variableDefaults.height,
 
-          lineHeight: 1.2,
-          letterSpacing: 0,
-        };
-      } else {
-        newBox = {
-          ...baseBox,
+          rotation: 0,
 
-          type: "qr",
+          opacity: 1,
 
-          variable: variableDefinition.key,
+          zIndex:
+            highestZIndex + 1,
 
-          width: 20,
-          height: 20,
+          locked: false,
 
-          foregroundColor: "#000000",
-          backgroundColor: "#FFFFFF",
+          visible: true,
+
+          fontFamily:
+            variableDefaults.fontFamily,
+
+          fontSize:
+            variableDefaults.fontSize,
+
+          fontWeight:
+            variableDefaults.fontWeight,
+
+          color:
+            variableDefaults.color,
+
+          textAlign:
+            variableDefaults.textAlign,
+
+          textTransform:
+            variableDefaults.textTransform,
+
+          lineHeight:
+            variableDefaults.lineHeight,
+
+          letterSpacing:
+            variableDefaults.letterSpacing,
         };
       }
 
+      // ----------------------------------------------
+      // QR VARIABLE
+      // ----------------------------------------------
+
+      else {
+        if (
+          variableDefaults.type !==
+          "qr"
+        ) {
+          return state;
+        }
+
+        newBox = {
+          id: boxId,
+
+          type: "qr",
+
+          variable:
+            variableDefinition.key,
+
+          x: placement.x,
+
+          y: placement.y,
+
+          width:
+            variableDefaults.width,
+
+          height:
+            variableDefaults.height,
+
+          rotation: 0,
+
+          opacity: 1,
+
+          zIndex:
+            highestZIndex + 1,
+
+          locked: false,
+
+          visible: true,
+
+          foregroundColor:
+            variableDefaults.foregroundColor,
+
+          backgroundColor:
+            variableDefaults.backgroundColor,
+        };
+      }
+
+      // ----------------------------------------------
+      // Debug
+      // ----------------------------------------------
 
       console.log(
         "ADDING VARIABLE:",
         variable,
         newBox
-    );
+      );
+
+      // ----------------------------------------------
+      // Update template
+      // ----------------------------------------------
 
       return {
         template: {
