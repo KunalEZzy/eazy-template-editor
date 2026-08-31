@@ -1,8 +1,9 @@
-import { Textbox } from "fabric";
-
+import { Textbox,  Image as FabricImage, } from "fabric";
 import type { TextBox } from "../domain/box/box.types";
 import type { PreviewData } from "../domain/variables/preview.types";
-import { resolveTextVariable } from "../domain/variables/previewResolver";
+import type { QRBox } from "../domain/box/box.types";
+import { resolveTextVariable, resolveQRVariable, } from "../domain/variables/previewResolver";
+import { generateQRPreview } from "../services/qr/qrPreviewService";
 
 export interface CanvasSize {
   width: number;
@@ -124,4 +125,91 @@ export function textBoxToFabric(
   });
 
   return text;
+}
+
+export async function qrBoxToFabric(
+  box: QRBox,
+  previewData: PreviewData,
+  canvasSize: CanvasSize
+): Promise<FabricImage> {
+  const left = percentageToPixels(
+    box.x,
+    canvasSize.width
+  );
+
+  const top = percentageToPixels(
+    box.y,
+    canvasSize.height
+  );
+
+  const boxWidth = percentageToPixels(
+    box.width,
+    canvasSize.width
+  );
+
+  const boxHeight = percentageToPixels(
+    box.height,
+    canvasSize.height
+  );
+
+  const qrValue = resolveQRVariable(
+    box.variable,
+    previewData
+  );
+
+  const qrDataUrl =
+    await generateQRPreview(
+      qrValue,
+      {
+        width: Math.max(
+          1,
+          Math.round(boxWidth)
+        ),
+        foregroundColor:
+          box.foregroundColor,
+        backgroundColor:
+          box.backgroundColor,
+      }
+    );
+
+  const image =
+    await FabricImage.fromURL(qrDataUrl);
+
+  const imageWidth =
+    image.width || 1;
+
+  const imageHeight =
+    image.height || 1;
+
+  image.set({
+    left,
+    top,
+
+    originX: "left",
+    originY: "top",
+
+    scaleX:
+      boxWidth / imageWidth,
+
+    scaleY:
+      boxHeight / imageHeight,
+
+    angle: box.rotation,
+
+    opacity: box.opacity,
+
+    selectable: !box.locked,
+
+    evented: !box.locked,
+
+    visible: box.visible,
+
+    data: {
+      boxId: box.id,
+    },
+  });
+
+  image.setCoords();
+
+  return image;
 }

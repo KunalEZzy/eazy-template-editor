@@ -2,6 +2,7 @@ import type { Template } from "../../domain/template/template.types";
 import type { TextBox } from "../../domain/box/box.types";
 import { LayersPanel } from "../layers/LayersPanel";
 import type { DesignTokens } from "./EditorHeader";
+import { VariablePicker } from "../variables/VariablePicker";
 
 interface LeftSidebarProps {
   template: Template;
@@ -43,6 +44,17 @@ export function LeftSidebar({
         tokens={tokens}
         onSelectBox={onSelectBox}
       />
+
+      {/* Variable Section */}
+      <div
+        style={{
+          padding: "16px",
+          borderTop: `1px solid ${tokens.border}`,
+          borderBottom: `1px solid ${tokens.border}`,
+        }}
+      >
+        <VariablePicker />
+      </div>
 
       {/* Quick Actions Panel */}
       <div style={{ padding: "16px" }}>

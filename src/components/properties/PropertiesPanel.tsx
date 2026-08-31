@@ -2,6 +2,7 @@ import { useEditorStore } from "../../store/editorStore";
 import { GeometrySection } from "./GeometrySection";
 import { TypographySection } from "./TypographySection";
 import { BackgroundSection } from "./BackgroundSection";
+import { QRPropertiesSection } from "./QRPropertiesSection";
 
 export function PropertiesPanel() {
   const template = useEditorStore(
@@ -18,6 +19,10 @@ export function PropertiesPanel() {
 
   const updateTextBox = useEditorStore(
     (state) => state.updateTextBox
+  );
+
+  const updateQRBox = useEditorStore(
+    (state) => state.updateQRBox
   );
 
   // Return a clean placeholder if no template or selection is active
@@ -184,6 +189,26 @@ export function PropertiesPanel() {
           <TypographySection box={box} updateTextBox={updateTextBox} />
         </>
       )}
+
+      {box.type === "qr" && (
+      <>
+        <hr
+          style={{
+            border: "none",
+            borderTop:
+              "1px solid var(--border)",
+            margin: 0,
+          }}
+        />
+
+        <QRPropertiesSection
+          box={box}
+          updateQRBox={
+            updateQRBox
+          }
+        />
+      </>
+    )}
 
       {/* Background Section */}
       <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: 0 }} />

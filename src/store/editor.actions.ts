@@ -1,6 +1,7 @@
-import type { TextBox } from "../domain/box/box.types";
+import type { QRBox, TextBox } from "../domain/box/box.types";
 import type { Template } from "../domain/template/template.types";
 import type { EditorPanel } from "./editor.types";
+import type {TextVariable, QRVariable } from "../domain/variables/variables.types";
 
 export interface EditorActions {
   setTemplate: (
@@ -33,6 +34,13 @@ export interface EditorActions {
     }
   ) => void;
 
+  updateQRBox: (
+    boxId: string,
+    changes: Partial<
+      Omit<QRBox, "id" | "type">
+    >
+  ) => void;
+
   setZoom: (
     zoom: number
   ) => void;
@@ -63,4 +71,8 @@ export interface EditorActions {
   ) => void;
 
   resetEditor: () => void;
+
+  addVariable: (
+    variable: TextVariable | QRVariable
+  ) => void;
 }

@@ -13,6 +13,17 @@ const editorService = new EditorService(repository);
 
 export function EditorLayout() {
   const template = useEditorStore((state) => state.template);
+  console.log(
+  "EDITOR LAYOUT BOXES:",
+  template?.boxes.map((box) => ({
+    id: box.id,
+    type: box.type,
+    variable:
+      box.type === "text" || box.type === "qr"
+        ? box.variable
+        : null,
+  }))
+);
   const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
   const isSaving = useEditorStore((state) => state.isSaving);
   const isDirty = useEditorStore((state) => state.isDirty);
