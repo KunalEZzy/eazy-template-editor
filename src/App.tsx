@@ -93,6 +93,7 @@ function App() {
               margin: "0 auto 16px"
             }}
           />
+
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <div>Loading template editor...</div>
         </div>

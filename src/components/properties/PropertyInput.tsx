@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
-// Reusable local state wrapper for numeric inputs to avoid snapping back when cleared/empty
 export interface PropertyInputProps {
   label?: string;
   value: number;
@@ -11,49 +13,134 @@ export interface PropertyInputProps {
   style?: React.CSSProperties;
 }
 
-export function PropertyInput({ label, value, step = "0.1", min, max, onChange, style }: PropertyInputProps) {
-  const [localVal, setLocalVal] = useState<string>(value.toString());
+function formatNumber(
+  value: number,
+  step: string
+): string {
+  if (step.includes(".")) {
+    const decimals =
+      step.split(".")[1]?.length ?? 0;
 
-  // Keep local state in sync with changes from other sources (e.g. mouse drags, keyboard keys)
+    return parseFloat(
+      value.toFixed(decimals)
+    ).toString();
+  }
+
+  return value.toString();
+}
+
+export function PropertyInput({
+  label,
+  value,
+  step = "0.1",
+  min,
+  max,
+  onChange,
+  style,
+}: PropertyInputProps) {
+  const [
+    localVal,
+    setLocalVal,
+  ] = useState(() =>
+    formatNumber(value, step)
+  );
+
+  /*
+   * We only synchronize when the external
+   * value has actually changed.
+   *
+   * This is needed because the value can change
+   * from:
+   * - mouse drag
+   * - keyboard movement
+   * - another property
+   * - selecting another object
+   */
   useEffect(() => {
-    const parsedLocal = parseFloat(localVal);
-    // Use an epsilon comparison for floating-point coordinates (e.g. diff < 0.01)
-    const hasChanged = isNaN(parsedLocal) || Math.abs(parsedLocal - value) > 0.001;
-    if (hasChanged) {
-      // Format coordinate decimals cleanly (e.g. limit to 1 decimal place if it's layout)
-      const formatted = step.includes(".") 
-        ? parseFloat(value.toFixed(step.split(".")[1].length)).toString()
-        : value.toString();
-      setLocalVal(formatted);
-    }
-  }, [value, step]);
+    const parsed =
+      parseFloat(localVal);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
+    if (
+      Number.isNaN(parsed) ||
+      Math.abs(
+        parsed - value
+      ) > 0.001
+    ) {
+      setLocalVal(
+        formatNumber(
+          value,
+          step
+        )
+      );
+    }
+  }, [value, step, localVal]);
+
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const raw =
+      event.target.value;
+
     setLocalVal(raw);
-    
-    const parsed = parseFloat(raw);
-    if (!isNaN(parsed)) {
+
+    const parsed =
+      parseFloat(raw);
+
+    if (!Number.isNaN(parsed)) {
       onChange(parsed);
     }
   };
 
   const handleBlur = () => {
-    const parsed = parseFloat(localVal);
-    if (isNaN(parsed)) {
-      setLocalVal(value.toString());
-    } else {
-      onChange(parsed);
+    const parsed =
+      parseFloat(localVal);
+
+    if (Number.isNaN(parsed)) {
+      setLocalVal(
+        formatNumber(
+          value,
+          step
+        )
+      );
+
+      return;
     }
+
+    onChange(parsed);
+
+    setLocalVal(
+      formatNumber(
+        parsed,
+        step
+      )
+    );
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", position: "relative", width: "100%", ...style }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        position: "relative",
+        width: "100%",
+        ...style,
+      }}
+    >
       {label && (
-        <span style={{ position: "absolute", left: "8px", fontSize: "10px", fontWeight: 700, color: "var(--text)", pointerEvents: "none" }}>
+        <span
+          style={{
+            position: "absolute",
+            left: "8px",
+            fontSize: "10px",
+            fontWeight: 700,
+            color: "var(--text)",
+            pointerEvents: "none",
+          }}
+        >
           {label}
         </span>
       )}
+
       <input
         type="number"
         step={step}
@@ -63,30 +150,49 @@ export function PropertyInput({ label, value, step = "0.1", min, max, onChange, 
         value={localVal}
         onChange={handleChange}
         onBlur={handleBlur}
-        style={{ paddingLeft: label ? "24px" : "8px" }}
+        style={{
+          paddingLeft:
+            label
+              ? "24px"
+              : "8px",
+        }}
       />
     </div>
   );
 }
 
-// Reusable local state wrapper for text fields (like Hex colors) to avoid reset snapping
+// --------------------------------------------------
+// Text property input
+// --------------------------------------------------
+
 export interface PropertyTextInputProps {
   value: string;
   onChange: (val: string) => void;
   style?: React.CSSProperties;
 }
 
-export function PropertyTextInput({ value, onChange, style }: PropertyTextInputProps) {
-  const [localVal, setLocalVal] = useState<string>(value);
+export function PropertyTextInput({
+  value,
+  onChange,
+  style,
+}: PropertyTextInputProps) {
+  const [
+    localVal,
+    setLocalVal,
+  ] = useState(value);
 
   useEffect(() => {
     if (localVal !== value) {
       setLocalVal(value);
     }
-  }, [value]);
+  }, [value, localVal]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const raw =
+      event.target.value;
+
     setLocalVal(raw);
     onChange(raw);
   };
