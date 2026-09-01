@@ -75,4 +75,9 @@ export interface EditorActions {
   addVariable: (
     variable: TextVariable | QRVariable
   ) => void;
+
+  deleteBox: (
+    boxId:string
+  ) => void;
+  
 }

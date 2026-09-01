@@ -534,4 +534,45 @@ export const useEditorStore = create<
         isDirty: true,
       };
     }),
+
+    // --------------------------------------------------
+    // Delete Box
+    // --------------------------------------------------
+    deleteBox: (boxId) =>
+    set((state) => {
+      if (!state.template) {
+        return state;
+      }
+
+      const boxExists =
+        state.template.boxes.some(
+          (box) => box.id === boxId
+        );
+
+      if (!boxExists) {
+        return state;
+      }
+
+      const boxes =
+        state.template.boxes.filter(
+          (box) => box.id !== boxId
+        );
+
+      return {
+        template: {
+          ...state.template,
+          boxes,
+          updatedAt:
+            new Date().toISOString(),
+        },
+
+        selectedBoxId:
+          state.selectedBoxId === boxId
+            ? null
+            : state.selectedBoxId,
+
+        isDirty: true,
+      };
+    }),
+
 }));

@@ -32,6 +32,7 @@ export function EditorLayout() {
   const updateTextBox = useEditorStore((state) => state.updateTextBox);
   const setSaving = useEditorStore((state) => state.setSaving);
   const setError = useEditorStore((state) => state.setError);
+  const deleteBox = useEditorStore((state) => state.deleteBox);
 
   // Light/Dark mode state initialized from localStorage with user system preferences fallback
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -162,6 +163,7 @@ export function EditorLayout() {
           tokens={tokens}
           onSelectBox={selectBox}
           onUpdateTextBox={updateTextBox}
+          onDeleteBox={deleteBox}
         />
 
         {/* Center Panel - Workbench & Canvas View */}

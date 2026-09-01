@@ -9,8 +9,19 @@ interface LeftSidebarProps {
   selectedBoxId: string | null;
   isDark: boolean;
   tokens: DesignTokens;
+
   onSelectBox: (boxId: string | null) => void;
-  onUpdateTextBox: (boxId: string, changes: Partial<Omit<TextBox, "id" | "type">>) => void;
+
+  onUpdateTextBox: (
+    boxId: string,
+    changes: Partial<
+      Omit<TextBox, "id" | "type">
+    >
+  ) => void;
+
+  onDeleteBox: (
+    boxId: string
+  ) => void;
 }
 
 export function LeftSidebar({
@@ -20,8 +31,13 @@ export function LeftSidebar({
   tokens,
   onSelectBox,
   onUpdateTextBox,
+  onDeleteBox,
 }: LeftSidebarProps) {
-  const discountBox = template.boxes.find((box) => box.id === "box-discount");
+  const discountBox =
+    template.boxes.find(
+      (box) =>
+        box.id === "box-discount"
+    );
 
   return (
     <aside
@@ -33,19 +49,23 @@ export function LeftSidebar({
         flexDirection: "column",
         overflowY: "auto",
         boxSizing: "border-box",
-        transition: "background-color 0.2s, border-color 0.2s"
+        transition:
+          "background-color 0.2s, border-color 0.2s",
       }}
     >
       {/* Layers Section */}
+
       <LayersPanel
         boxes={template.boxes}
         selectedBoxId={selectedBoxId}
         isDark={isDark}
         tokens={tokens}
         onSelectBox={onSelectBox}
+        onDeleteBox={onDeleteBox}
       />
 
       {/* Variable Section */}
+
       <div
         style={{
           padding: "16px",
@@ -57,77 +77,149 @@ export function LeftSidebar({
       </div>
 
       {/* Quick Actions Panel */}
-      <div style={{ padding: "16px" }}>
-        <h2 style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", color: tokens.text, marginBottom: "12px", letterSpacing: "0.5px" }}>
+
+      <div
+        style={{
+          padding: "16px",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "11px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            color: tokens.text,
+            marginBottom: "12px",
+            letterSpacing: "0.5px",
+          }}
+        >
           Quick Tools
         </h2>
-        
+
         <div
           style={{
             background: tokens.cardBg,
             borderRadius: "8px",
             padding: "12px",
             border: `1px solid ${tokens.border}`,
-            transition: "background-color 0.2s, border-color 0.2s"
+            transition:
+              "background-color 0.2s, border-color 0.2s",
           }}
         >
-          <div style={{ fontSize: "12px", color: tokens.text, marginBottom: "8px", textAlign: "left" }}>
+          <div
+            style={{
+              fontSize: "12px",
+              color: tokens.text,
+              marginBottom: "8px",
+              textAlign: "left",
+            }}
+          >
             Discount font size:{" "}
-            <strong style={{ color: tokens.textActive }}>
-              {discountBox?.type === "text"
+            <strong
+              style={{
+                color: tokens.textActive,
+              }}
+            >
+              {discountBox?.type ===
+              "text"
                 ? `${discountBox.fontSize}px`
                 : "N/A"}
             </strong>
           </div>
-          
+
           <button
+            type="button"
             onClick={() =>
-              onUpdateTextBox("box-discount", {
-                fontSize: 72,
-              })
+              onUpdateTextBox(
+                "box-discount",
+                {
+                  fontSize: 72,
+                }
+              )
             }
             style={{
               width: "100%",
               padding: "8px",
-              backgroundColor: tokens.toolBtnBg,
+              backgroundColor:
+                tokens.toolBtnBg,
               border: `1px solid ${tokens.toolBtnBorder}`,
               borderRadius: "4px",
               cursor: "pointer",
               fontSize: "12px",
               fontWeight: 600,
               color: tokens.textActive,
-              transition: "all 0.2s"
+              transition: "all 0.2s",
             }}
             onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = tokens.accent;
-              e.currentTarget.style.color = "#fff";
+              e.currentTarget.style.backgroundColor =
+                tokens.accent;
+
+              e.currentTarget.style.color =
+                "#fff";
             }}
             onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = tokens.toolBtnBg;
-              e.currentTarget.style.color = tokens.textActive;
+              e.currentTarget.style.backgroundColor =
+                tokens.toolBtnBg;
+
+              e.currentTarget.style.color =
+                tokens.textActive;
             }}
           >
             Set Discount Size to 72px
           </button>
         </div>
-        
+
         {/* Keyboard Shortcuts Cheat Sheet */}
+
         <div
           style={{
             marginTop: "20px",
             fontSize: "11px",
             color: tokens.text,
-            textAlign: "left"
+            textAlign: "left",
           }}
         >
-          <div style={{ fontWeight: "bold", color: tokens.textActive, marginBottom: "6px" }}>Keyboard Controls:</div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-            <span>Arrow Keys</span>
-            <span>Move 1px</span>
+          <div
+            style={{
+              fontWeight: "bold",
+              color: tokens.textActive,
+              marginBottom: "6px",
+            }}
+          >
+            Keyboard Controls:
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>Shift + Arrows</span>
-            <span>Move 10px</span>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent:
+                "space-between",
+              marginBottom: "4px",
+            }}
+          >
+            <span>
+              Arrow Keys
+            </span>
+
+            <span>
+              Move 1px
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent:
+                "space-between",
+            }}
+          >
+            <span>
+              Shift + Arrows
+            </span>
+
+            <span>
+              Move 10px
+            </span>
           </div>
         </div>
       </div>

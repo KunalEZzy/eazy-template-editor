@@ -651,112 +651,191 @@ export function CanvasEditor({
     height,
   ]);
 
-  // --------------------------------------------------
-  // 6. Sync Zustand -> Fabric objects
-  // --------------------------------------------------
+    // --------------------------------------------------
+    // 6. Sync Zustand -> Fabric objects
+    // --------------------------------------------------
 
-  useEffect(() => {
-    const canvas =
-      fabricCanvasRef.current;
+    useEffect(() => {
+      const canvas =
+        fabricCanvasRef.current;
 
-    if (!canvas) {
-      return;
-    }
+      if (!canvas) {
+        return;
+      }
 
-    template.boxes.forEach((box) => {
-      const fabricObject =
+      // --------------------------------------------
+      // REMOVE FABRIC OBJECTS THAT NO LONGER EXIST
+      // IN THE ZUSTAND TEMPLATE
+      // --------------------------------------------
+
+      const templateBoxIds = new Set(
+        template.boxes.map(
+          (box) => box.id
+        )
+      );
+
+      const objectsToRemove =
         canvas
           .getObjects()
-          .find(
-            (object) =>
-              object
-                .get("data")
-                ?.boxId === box.id
-          );
+          .filter((object) => {
+            const data =
+              object.get("data");
 
-      if (!fabricObject) {
-        return;
-      }
+            // Never remove the background.
+            if (
+              data?.isBackground === true
+            ) {
+              return false;
+            }
 
-      // --------------------------------------------
-      // TEXT
-      // --------------------------------------------
+            const boxId =
+              data?.boxId;
 
-      if (box.type === "text") {
-        const newLeft =
-          percentageToPixels(
-            box.x,
-            width
-          );
+            return (
+              typeof boxId === "string" &&
+              !templateBoxIds.has(boxId)
+            );
+          });
 
-        const newTop =
-          percentageToPixels(
-            box.y,
-            height
-          );
-
-        const newWidth =
-          percentageToPixels(
-            box.width,
-            width
-          );
-
-        fabricObject.set({
-          left: newLeft,
-          top: newTop,
-          width: newWidth,
-          angle: box.rotation,
-          opacity: box.opacity,
-          scaleX: 1,
-        });
-
-        fabricObject.setCoords();
-
-        return;
-      }
+      objectsToRemove.forEach(
+        (object) => {
+          canvas.remove(object);
+        }
+      );
 
       // --------------------------------------------
-      // QR
+      // UPDATE EXISTING FABRIC OBJECTS
       // --------------------------------------------
 
-      if (box.type === "qr") {
-        /*
-         * QR size is based on canvas WIDTH.
-         *
-         * This keeps the QR physically square
-         * even when the canvas itself is vertical.
-         */
-        const qrSize =
-          percentageToPixels(
-            box.width,
-            width
-          );
+      template.boxes.forEach((box) => {
+        const fabricObject =
+          canvas
+            .getObjects()
+            .find(
+              (object) =>
+                object
+                  .get("data")
+                  ?.boxId === box.id
+            );
 
-        if (qrSize <= 0) {
+        if (!fabricObject) {
           return;
         }
 
-        const baseWidth =
-          fabricObject.width ?? 0;
+        // --------------------------------------------
+        // TEXT
+        // --------------------------------------------
 
-        const baseHeight =
-          fabricObject.height ?? 0;
+        if (box.type === "text") {
+          const newLeft =
+            percentageToPixels(
+              box.x,
+              width
+            );
 
-        if (
-          baseWidth <= 0 ||
-          baseHeight <= 0
-        ) {
+          const newTop =
+            percentageToPixels(
+              box.y,
+              height
+            );
+
+          const newWidth =
+            percentageToPixels(
+              box.width,
+              width
+            );
+
+          fabricObject.set({
+            left: newLeft,
+            top: newTop,
+            width: newWidth,
+            angle: box.rotation,
+            opacity: box.opacity,
+            scaleX: 1,
+          });
+
+          fabricObject.setCoords();
+
           return;
         }
 
-        /*
-         * Fabric QR image itself must remain square.
-         */
-        const scaleX =
-          qrSize / baseWidth;
+        // --------------------------------------------
+        // QR
+        // --------------------------------------------
 
-        const scaleY =
-          qrSize / baseHeight;
+        if (box.type === "qr") {
+          /*
+          * QR size is based on canvas WIDTH.
+          *
+          * This keeps the QR physically square
+          * even when the canvas itself is vertical.
+          */
+          const qrSize =
+            percentageToPixels(
+              box.width,
+              width
+            );
+
+          if (qrSize <= 0) {
+            return;
+          }
+
+          const baseWidth =
+            fabricObject.width ?? 0;
+
+          const baseHeight =
+            fabricObject.height ?? 0;
+
+          if (
+            baseWidth <= 0 ||
+            baseHeight <= 0
+          ) {
+            return;
+          }
+
+          /*
+          * Fabric QR image itself must remain square.
+          */
+          const scaleX =
+            qrSize / baseWidth;
+
+          const scaleY =
+            qrSize / baseHeight;
+
+          fabricObject.set({
+            left:
+              percentageToPixels(
+                box.x,
+                width
+              ),
+
+            top:
+              percentageToPixels(
+                box.y,
+                height
+              ),
+
+            scaleX,
+            scaleY,
+
+            angle: box.rotation,
+
+            opacity: box.opacity,
+
+            visible: box.visible,
+
+            selectable:
+              !box.locked,
+          });
+
+          fabricObject.setCoords();
+
+          return;
+        }
+
+        // --------------------------------------------
+        // OTHER OBJECTS
+        // --------------------------------------------
 
         fabricObject.set({
           left:
@@ -771,9 +850,6 @@ export function CanvasEditor({
               height
             ),
 
-          scaleX,
-          scaleY,
-
           angle: box.rotation,
 
           opacity: box.opacity,
@@ -785,46 +861,14 @@ export function CanvasEditor({
         });
 
         fabricObject.setCoords();
-
-        return;
-      }
-
-      // --------------------------------------------
-      // OTHER OBJECTS
-      // --------------------------------------------
-
-      fabricObject.set({
-        left:
-          percentageToPixels(
-            box.x,
-            width
-          ),
-
-        top:
-          percentageToPixels(
-            box.y,
-            height
-          ),
-
-        angle: box.rotation,
-
-        opacity: box.opacity,
-
-        visible: box.visible,
-
-        selectable:
-          !box.locked,
       });
 
-      fabricObject.setCoords();
-    });
-
-    canvas.renderAll();
-  }, [
-    template,
-    width,
-    height,
-  ]);
+      canvas.renderAll();
+    }, [
+      template,
+      width,
+      height,
+    ]);
 
   // --------------------------------------------------
   // 7. Selection
@@ -1391,6 +1435,64 @@ export function CanvasEditor({
     width,
     height,
   ]);
+
+  useEffect(() => {
+  const handleKeyDown = (
+    event: KeyboardEvent
+  ) => {
+    const target = event.target as HTMLElement | null;
+
+    if (!target) {
+      return;
+    }
+
+    const tagName =
+      target.tagName.toLowerCase();
+
+    const isTyping =
+      tagName === "input" ||
+      tagName === "textarea" ||
+      tagName === "select" ||
+      target.isContentEditable;
+
+    if (isTyping) {
+      return;
+    }
+
+    if (
+      event.key !== "Backspace" &&
+      event.key !== "Delete"
+    ) {
+      return;
+    }
+
+    const selectedBoxId =
+      useEditorStore.getState()
+        .selectedBoxId;
+
+    if (!selectedBoxId) {
+      return;
+    }
+
+    event.preventDefault();
+
+    useEditorStore
+      .getState()
+      .deleteBox(selectedBoxId);
+  };
+
+  window.addEventListener(
+    "keydown",
+    handleKeyDown
+  );
+
+  return () => {
+    window.removeEventListener(
+      "keydown",
+      handleKeyDown
+    );
+  };
+}, []);
 
   return (
     <canvas
