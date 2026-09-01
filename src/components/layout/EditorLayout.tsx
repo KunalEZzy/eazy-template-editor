@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useEditorStore } from "../../store/editorStore";
 import { CanvasEditor } from "../../canvas/CanvasEditor";
 import { mockPreviewData } from "../../domain/variables/preview.mock";
@@ -32,6 +32,9 @@ export function EditorLayout() {
   const updateTextBox = useEditorStore((state) => state.updateTextBox);
   const setSaving = useEditorStore((state) => state.setSaving);
   const setError = useEditorStore((state) => state.setError);
+  const deleteBox = useEditorStore((state) => state.deleteBox);
+  const undo = useEditorStore((state) => state.undo);
+  const redo = useEditorStore((state) => state.redo);
 
   // Light/Dark mode state initialized from localStorage with user system preferences fallback
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -91,6 +94,77 @@ export function EditorLayout() {
       setSaving(false);
     }
   };
+
+    useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isMac =
+        navigator.platform.toUpperCase().includes("MAC");
+
+      const modifierKey = isMac
+        ? event.metaKey
+        : event.ctrlKey;
+
+      if (!modifierKey) {
+        return;
+      }
+
+      // --------------------------------------------
+      // Undo
+      // Cmd + Z / Ctrl + Z
+      // --------------------------------------------
+
+      if (
+        event.key.toLowerCase() === "z" &&
+        !event.shiftKey
+      ) {
+        event.preventDefault();
+        undo();
+        return;
+      }
+
+      // --------------------------------------------
+      // Redo
+      // Cmd + Shift + Z / Ctrl + Shift + Z
+      // --------------------------------------------
+
+      if (
+        event.key.toLowerCase() === "z" &&
+        event.shiftKey
+      ) {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
+      // --------------------------------------------
+      // Redo
+      // Ctrl + Y
+      //
+      // Common Windows/Linux shortcut.
+      // We don't use Cmd + Y on macOS.
+      // --------------------------------------------
+
+      if (
+        !isMac &&
+        event.key.toLowerCase() === "y"
+      ) {
+        event.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [undo, redo]);
 
   if (!template) {
     return null;
@@ -162,6 +236,7 @@ export function EditorLayout() {
           tokens={tokens}
           onSelectBox={selectBox}
           onUpdateTextBox={updateTextBox}
+          onDeleteBox={deleteBox}
         />
 
         {/* Center Panel - Workbench & Canvas View */}

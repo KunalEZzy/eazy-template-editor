@@ -32,4 +32,10 @@ export interface EditorState {
   isSaving: boolean;
 
   error: string | null;
+
+  // Previous template states.
+  past: Template[];
+
+  // Template states available for redo.
+  future: Template[];
 }

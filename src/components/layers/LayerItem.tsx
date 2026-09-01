@@ -6,6 +6,7 @@ interface DesignTokens {
   accent: string;
   accentLight: string;
   accentText: string;
+  border?: string;
 }
 
 interface LayerItemProps {
@@ -14,63 +15,158 @@ interface LayerItemProps {
   isDark: boolean;
   tokens: DesignTokens;
   onSelect: (boxId: string) => void;
+  onDelete: (boxId: string) => void;
 }
 
-export function LayerItem({ box, isSelected, isDark, tokens, onSelect }: LayerItemProps) {
+export function LayerItem({
+  box,
+  isSelected,
+  isDark,
+  tokens,
+  onSelect,
+  onDelete,
+}: LayerItemProps) {
   return (
-    <button
-      onClick={() => onSelect(box.id)}
+    <div
       style={{
         width: "100%",
         display: "flex",
         alignItems: "center",
-        gap: "8px",
-        padding: "8px 12px",
-        textAlign: "left",
-        background: isSelected ? tokens.accentLight : "transparent",
-        border: isSelected ? `1px solid ${tokens.accent}` : "1px solid transparent",
+        gap: "4px",
+        boxSizing: "border-box",
+        background: isSelected
+          ? tokens.accentLight
+          : "transparent",
+        border: isSelected
+          ? `1px solid ${tokens.accent}`
+          : "1px solid transparent",
         borderRadius: "6px",
-        cursor: "pointer",
-        color: isSelected ? tokens.accentText : tokens.text,
-        fontWeight: isSelected ? 600 : 400,
-        transition: "all 0.15s"
+        transition: "all 0.15s",
       }}
       onMouseOver={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.background = isDark ? "#222" : "#f3f4f6";
-          e.currentTarget.style.color = tokens.textActive;
+          e.currentTarget.style.background =
+            isDark ? "#222" : "#f3f4f6";
         }
       }}
       onMouseOut={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = tokens.text;
+          e.currentTarget.style.background =
+            "transparent";
         }
       }}
     >
-      {/* Layer Type Icon Tag */}
-      <span
+      {/* Layer Selection Area */}
+      <button
+        type="button"
+        onClick={() => onSelect(box.id)}
         style={{
-          fontSize: "9px",
-          fontWeight: "bold",
-          padding: "2px 4px",
-          background: box.type === "text" ? "#3b82f6" : "#10b981",
-          color: "#fff",
-          borderRadius: "3px",
-          textTransform: "uppercase",
-          lineHeight: 1
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "8px 8px 8px 12px",
+          textAlign: "left",
+          background: "transparent",
+          border: "none",
+          borderRadius: "6px",
+          cursor: "pointer",
+          color: isSelected
+            ? tokens.accentText
+            : tokens.text,
+          fontWeight: isSelected ? 600 : 400,
         }}
       >
-        {box.type}
-      </span>
-      <span style={{ fontSize: "13px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
-        {box.id.replace("box-", "")}
-      </span>
+        {/* Layer Type */}
+        <span
+          style={{
+            flexShrink: 0,
+            fontSize: "9px",
+            fontWeight: "bold",
+            padding: "2px 4px",
+            background:
+              box.type === "text"
+                ? "#3b82f6"
+                : "#10b981",
+            color: "#fff",
+            borderRadius: "3px",
+            textTransform: "uppercase",
+            lineHeight: 1,
+          }}
+        >
+          {box.type}
+        </span>
 
-      {/* Locked Indicator */}
-      {box.locked && (
-        <span style={{ fontSize: "11px", color: tokens.text }}>🔒</span>
-      )}
-    </button>
+        {/* Layer Name */}
+        <span
+          style={{
+            fontSize: "13px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            flex: 1,
+          }}
+        >
+          {box.id.replace("box-", "")}
+        </span>
+
+        {/* Locked Indicator */}
+        {box.locked && (
+          <span
+            style={{
+              flexShrink: 0,
+              fontSize: "11px",
+              color: tokens.text,
+            }}
+          >
+            🔒
+          </span>
+        )}
+      </button>
+
+      {/* Delete */}
+      <button
+        type="button"
+        aria-label={`Delete ${box.id}`}
+        title="Delete"
+        onClick={(event) => {
+          event.stopPropagation();
+          onDelete(box.id);
+        }}
+        style={{
+          flexShrink: 0,
+          width: "30px",
+          height: "30px",
+          marginRight: "4px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 0,
+          background: "transparent",
+          border: "none",
+          borderRadius: "5px",
+          color: tokens.text,
+          cursor: "pointer",
+          fontSize: "13px",
+        }}
+        onMouseOver={(event) => {
+          event.currentTarget.style.background =
+            isDark ? "#3a1f1f" : "#fee2e2";
+
+          event.currentTarget.style.color =
+            "#ef4444";
+        }}
+        onMouseOut={(event) => {
+          event.currentTarget.style.background =
+            "transparent";
+
+          event.currentTarget.style.color =
+            tokens.text;
+        }}
+      >
+        🗑️
+      </button>
+    </div>
   );
 }
