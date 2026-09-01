@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-
 import {
   Canvas,
   Image,
@@ -9,6 +8,7 @@ import {
 
 import type { Template } from "../domain/template/template.types";
 import type { PreviewData } from "../domain/variables/preview.types";
+
 import { useEditorStore } from "../store/editorStore";
 
 import {
@@ -46,16 +46,15 @@ export function CanvasEditor({
     useRef<Canvas | null>(null);
 
   /*
-   * Keeps the latest template available to
-   * keyboard handlers.
+   * Always keep the latest template available
+   * to keyboard/event handlers.
    */
   const templateRef =
     useRef<Template>(template);
 
   /*
-   * Prevents the incremental renderer from
-   * running while the initial/full renderer
-   * is still creating objects.
+   * Prevents incremental reconciliation from
+   * running before the initial render finishes.
    */
   const initialRenderCompleteRef =
     useRef(false);
@@ -74,20 +73,22 @@ export function CanvasEditor({
 
   const updateBoxTransform =
     useEditorStore(
-      (state) =>
-        state.updateBoxTransform
+      (state) => state.updateBoxTransform
     );
 
   const updateTextBox =
     useEditorStore(
-      (state) =>
-        state.updateTextBox
+      (state) => state.updateTextBox
+    );
+
+  const deleteBox =
+    useEditorStore(
+      (state) => state.deleteBox
     );
 
   const templateLoadVersion =
     useEditorStore(
-      (state) =>
-        state.templateLoadVersion
+      (state) => state.templateLoadVersion
     );
 
   const temporaryBackgroundImageUrl =
@@ -96,9 +97,9 @@ export function CanvasEditor({
         state.temporaryBackgroundImageUrl
     );
 
-  // --------------------------------------------------
+  // ==================================================
   // 1. Fabric canvas lifecycle
-  // --------------------------------------------------
+  // ==================================================
 
   useEffect(() => {
     if (!canvasElementRef.current) {
@@ -129,9 +130,15 @@ export function CanvasEditor({
     };
   }, [width, height]);
 
-  // --------------------------------------------------
+  // ==================================================
   // 2. Full template render
-  // --------------------------------------------------
+  //
+  // IMPORTANT:
+  // We remove ONLY template objects.
+  //
+  // Background is managed separately and must
+  // survive Undo / Redo / template replacement.
+  // ==================================================
 
   useEffect(() => {
     const canvas =
@@ -149,7 +156,53 @@ export function CanvasEditor({
     let cancelled = false;
 
     async function renderTemplate() {
-      fabricCanvas.clear();
+      console.log(
+        "FULL RENDER START",
+        {
+          templateLoadVersion,
+          boxes:
+            template.boxes.map(
+              (box) => ({
+                id: box.id,
+                type: box.type,
+                variable:
+                  "variable" in box
+                    ? box.variable
+                    : undefined,
+              })
+            ),
+        }
+      );
+
+      // ----------------------------------------------
+      // Remove only template objects.
+      //
+      // NEVER remove background.
+      // ----------------------------------------------
+
+      const objectsToRemove =
+        fabricCanvas
+          .getObjects()
+          .filter((object) => {
+            const data =
+              object.get("data");
+
+            return (
+              data?.isBackground !== true
+            );
+          });
+
+      objectsToRemove.forEach(
+        (object) => {
+          fabricCanvas.remove(
+            object
+          );
+        }
+      );
+
+      // ----------------------------------------------
+      // Render every template box
+      // ----------------------------------------------
 
       for (const box of template.boxes) {
         if (cancelled) {
@@ -188,6 +241,15 @@ export function CanvasEditor({
 
         if (box.type === "qr") {
           try {
+            console.log(
+              "CREATING QR",
+              {
+                boxId: box.id,
+                variable:
+                  box.variable,
+              }
+            );
+
             const fabricQR =
               await qrBoxToFabric(
                 box,
@@ -202,6 +264,20 @@ export function CanvasEditor({
               return;
             }
 
+            console.log(
+              "QR CREATED",
+              {
+                boxId: box.id,
+                fabricQR,
+              }
+            );
+
+            /*
+             * Extra duplicate protection.
+             *
+             * QR creation is asynchronous, so check
+             * immediately before adding.
+             */
             const alreadyExists =
               fabricCanvas
                 .getObjects()
@@ -214,10 +290,17 @@ export function CanvasEditor({
                 );
 
             if (!alreadyExists) {
+              console.log(
+                "ADDING QR TO CANVAS",
+                box.id
+              );
+
               fabricCanvas.add(
                 fabricQR
               );
             }
+
+            continue;
           } catch (error) {
             if (!cancelled) {
               console.error(
@@ -226,6 +309,8 @@ export function CanvasEditor({
                 error
               );
             }
+
+            continue;
           }
         }
       }
@@ -234,9 +319,9 @@ export function CanvasEditor({
         return;
       }
 
-      // --------------------------------------------
-      // Background always at index 0
-      // --------------------------------------------
+      // ----------------------------------------------
+      // Keep background at index 0
+      // ----------------------------------------------
 
       const backgroundObject =
         fabricCanvas
@@ -245,7 +330,8 @@ export function CanvasEditor({
             (object) =>
               object
                 .get("data")
-                ?.isBackground === true
+                ?.isBackground ===
+              true
           );
 
       if (backgroundObject) {
@@ -258,9 +344,8 @@ export function CanvasEditor({
       fabricCanvas.renderAll();
 
       /*
-       * Only after the complete async render
-       * has finished do we allow incremental
-       * rendering.
+       * Only after the async render is completely
+       * finished do we allow reconciliation.
        */
       initialRenderCompleteRef.current =
         true;
@@ -281,56 +366,12 @@ export function CanvasEditor({
     height,
   ]);
 
-  // --------------------------------------------------
-  // 3. Sync text properties
-  // --------------------------------------------------
-
-  useEffect(() => {
-    const canvas =
-      fabricCanvasRef.current;
-
-    if (!canvas) {
-      return;
-    }
-
-    template.boxes.forEach((box) => {
-      if (box.type !== "text") {
-        return;
-      }
-
-      const fabricObject =
-        canvas
-          .getObjects()
-          .find(
-            (object) =>
-              object
-                .get("data")
-                ?.boxId === box.id
-          );
-
-      if (!fabricObject) {
-        return;
-      }
-
-      fabricObject.set({
-        fontSize: box.fontSize,
-        fontFamily: box.fontFamily,
-        fontWeight: box.fontWeight,
-        fill: box.color,
-        textAlign: box.textAlign,
-      });
-
-      fabricObject.setCoords();
-    });
-
-    canvas.renderAll();
-  }, [
-    template.boxes,
-  ]);
-
-  // --------------------------------------------------
-  // 4. Background image
-  // --------------------------------------------------
+// ==================================================
+// Background image
+//
+// Background is an independent Fabric object.
+// It must survive template Undo / Redo.
+// ==================================================
 
   useEffect(() => {
     const canvas =
@@ -344,18 +385,49 @@ export function CanvasEditor({
       temporaryBackgroundImageUrl ??
       template.background.imageUrl;
 
+    // ----------------------------------------------
+    // No background
+    // ----------------------------------------------
+
     if (!backgroundUrl) {
+      const existingBackground =
+        canvas
+          .getObjects()
+          .find(
+            (object) =>
+              object
+                .get("data")
+                ?.isBackground === true
+          );
+
+      if (existingBackground) {
+        canvas.remove(
+          existingBackground
+        );
+      }
+
       canvas.renderAll();
+
       return;
     }
 
-    const imageUrl =
+    // ----------------------------------------------
+    // Important:
+    // Capture the already-narrowed values.
+    // ----------------------------------------------
+
+    const fabricCanvas: Canvas = canvas;
+    const resolvedBackgroundUrl: string =
       backgroundUrl;
 
     let cancelled = false;
 
+    // ----------------------------------------------
+    // Remove existing background
+    // ----------------------------------------------
+
     const existingBackground =
-      canvas
+      fabricCanvas
         .getObjects()
         .find(
           (object) =>
@@ -365,18 +437,20 @@ export function CanvasEditor({
         );
 
     if (existingBackground) {
-      canvas.remove(
+      fabricCanvas.remove(
         existingBackground
       );
     }
 
-    const fabricCanvas = canvas;
+    // ----------------------------------------------
+    // Load background
+    // ----------------------------------------------
 
     async function loadBackground() {
       try {
         const image =
           await Image.fromURL(
-            imageUrl
+            resolvedBackgroundUrl
           );
 
         if (cancelled) {
@@ -396,10 +470,10 @@ export function CanvasEditor({
           return;
         }
 
-        /*
-         * Cover the complete canvas while
-         * preserving aspect ratio.
-         */
+        // ------------------------------------------
+        // Scale image to cover canvas
+        // ------------------------------------------
+
         const scaleX =
           width / imageWidth;
 
@@ -434,6 +508,30 @@ export function CanvasEditor({
           return;
         }
 
+        // ------------------------------------------
+        // Prevent duplicate background
+        // ------------------------------------------
+
+        const duplicateBackground =
+          fabricCanvas
+            .getObjects()
+            .find(
+              (object) =>
+                object
+                  .get("data")
+                  ?.isBackground === true
+            );
+
+        if (duplicateBackground) {
+          fabricCanvas.remove(
+            duplicateBackground
+          );
+        }
+
+        // ------------------------------------------
+        // Add background
+        // ------------------------------------------
+
         fabricCanvas.add(image);
 
         fabricCanvas.moveObjectTo(
@@ -464,9 +562,16 @@ export function CanvasEditor({
     height,
   ]);
 
-  // --------------------------------------------------
-  // 5. Incrementally add NEW boxes
-  // --------------------------------------------------
+  // ==================================================
+  // 4. Reconcile Zustand -> Fabric
+  //
+  // Handles:
+  //   ADD
+  //   UPDATE
+  //   REMOVE
+  //
+  // This is for normal document changes.
+  // ==================================================
 
   useEffect(() => {
     const canvas =
@@ -476,9 +581,6 @@ export function CanvasEditor({
       return;
     }
 
-    /*
-     * Full renderer owns initial rendering.
-     */
     if (
       !initialRenderCompleteRef.current
     ) {
@@ -489,89 +591,60 @@ export function CanvasEditor({
 
     let cancelled = false;
 
-    async function addNewBoxes() {
+    async function reconcileCanvas() {
+      // ----------------------------------------------
+      // Current Fabric objects
+      // ----------------------------------------------
+
+      const fabricObjectMap =
+        new Map<
+          string,
+          FabricObject
+        >();
+
+      fabricCanvas
+        .getObjects()
+        .forEach(
+          (object) => {
+            const boxId =
+              object
+                .get("data")
+                ?.boxId;
+
+            if (
+              typeof boxId ===
+              "string"
+            ) {
+              fabricObjectMap.set(
+                boxId,
+                object
+              );
+            }
+          }
+        );
+
+      // ----------------------------------------------
+      // ADD / UPDATE
+      // ----------------------------------------------
+
       for (const box of template.boxes) {
         if (cancelled) {
           return;
         }
 
-        if (
-          box.type === "text" ||
-          box.type === "qr"
-        ) {
-          console.log(
-            "INCREMENTAL BOX CHECK:",
-            box.id,
-            box.type,
-            box.variable
+        let fabricObject =
+          fabricObjectMap.get(
+            box.id
           );
-        }
 
         // --------------------------------------------
-        // Check existing object
+        // ADD missing object
         // --------------------------------------------
 
-        const existingObject =
-          fabricCanvas
-            .getObjects()
-            .find(
-              (object) =>
-                object
-                  .get("data")
-                  ?.boxId === box.id
-            );
-
-        if (existingObject) {
-          continue;
-        }
-
-        // --------------------------------------------
-        // TEXT
-        // --------------------------------------------
-
-        if (box.type === "text") {
-          const fabricText =
-            textBoxToFabric(
-              box,
-              previewData,
-              {
-                width,
-                height,
-              }
-            );
-
-          if (cancelled) {
-            return;
-          }
-
-          const alreadyExists =
-            fabricCanvas
-              .getObjects()
-              .some(
-                (object) =>
-                  object
-                    .get("data")
-                    ?.boxId ===
-                  box.id
-              );
-
-          if (!alreadyExists) {
-            fabricCanvas.add(
-              fabricText
-            );
-          }
-
-          continue;
-        }
-
-        // --------------------------------------------
-        // QR
-        // --------------------------------------------
-
-        if (box.type === "qr") {
-          try {
-            const fabricQR =
-              await qrBoxToFabric(
+        if (!fabricObject) {
+          if (box.type === "text") {
+            fabricObject =
+              textBoxToFabric(
                 box,
                 previewData,
                 {
@@ -579,151 +652,71 @@ export function CanvasEditor({
                   height,
                 }
               );
+          }
 
-            if (cancelled) {
-              return;
-            }
-
-            /*
-             * Re-check after async QR generation.
-             */
-            const alreadyExists =
-              fabricCanvas
-                .getObjects()
-                .some(
-                  (object) =>
-                    object
-                      .get("data")
-                      ?.boxId ===
-                    box.id
+          if (box.type === "qr") {
+            try {
+              fabricObject =
+                await qrBoxToFabric(
+                  box,
+                  previewData,
+                  {
+                    width,
+                    height,
+                  }
                 );
+            } catch (error) {
+              if (!cancelled) {
+                console.error(
+                  "Failed to create QR object:",
+                  box.id,
+                  error
+                );
+              }
 
-            if (!alreadyExists) {
-              fabricCanvas.add(
-                fabricQR
-              );
-            }
-          } catch (error) {
-            if (!cancelled) {
-              console.error(
-                "Failed to render newly added QR box:",
-                box.id,
-                error
-              );
+              continue;
             }
           }
-        }
-      }
 
-      if (cancelled) {
-        return;
-      }
+          if (cancelled) {
+            return;
+          }
 
-      const backgroundObject =
-        fabricCanvas
-          .getObjects()
-          .find(
-            (object) =>
-              object
-                .get("data")
-                ?.isBackground === true
-          );
+          if (!fabricObject) {
+            continue;
+          }
 
-      if (backgroundObject) {
-        fabricCanvas.moveObjectTo(
-          backgroundObject,
-          0
-        );
-      }
+          /*
+           * QR generation is async.
+           *
+           * Check again before adding.
+           */
+          const existing =
+            fabricCanvas
+              .getObjects()
+              .find(
+                (object) =>
+                  object
+                    .get("data")
+                    ?.boxId ===
+                  box.id
+              );
 
-      fabricCanvas.renderAll();
-    }
-
-    void addNewBoxes();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    template,
-    previewData,
-    width,
-    height,
-  ]);
-
-    // --------------------------------------------------
-    // 6. Sync Zustand -> Fabric objects
-    // --------------------------------------------------
-
-    useEffect(() => {
-      const canvas =
-        fabricCanvasRef.current;
-
-      if (!canvas) {
-        return;
-      }
-
-      // --------------------------------------------
-      // REMOVE FABRIC OBJECTS THAT NO LONGER EXIST
-      // IN THE ZUSTAND TEMPLATE
-      // --------------------------------------------
-
-      const templateBoxIds = new Set(
-        template.boxes.map(
-          (box) => box.id
-        )
-      );
-
-      const objectsToRemove =
-        canvas
-          .getObjects()
-          .filter((object) => {
-            const data =
-              object.get("data");
-
-            // Never remove the background.
-            if (
-              data?.isBackground === true
-            ) {
-              return false;
-            }
-
-            const boxId =
-              data?.boxId;
-
-            return (
-              typeof boxId === "string" &&
-              !templateBoxIds.has(boxId)
-            );
-          });
-
-      objectsToRemove.forEach(
-        (object) => {
-          canvas.remove(object);
-        }
-      );
-
-      // --------------------------------------------
-      // UPDATE EXISTING FABRIC OBJECTS
-      // --------------------------------------------
-
-      template.boxes.forEach((box) => {
-        const fabricObject =
-          canvas
-            .getObjects()
-            .find(
-              (object) =>
-                object
-                  .get("data")
-                  ?.boxId === box.id
+          if (!existing) {
+            fabricCanvas.add(
+              fabricObject
             );
 
-        if (!fabricObject) {
-          return;
+            fabricObject =
+              fabricObject;
+          } else {
+            fabricObject =
+              existing;
+          }
         }
 
         // --------------------------------------------
-        // TEXT
+        // UPDATE TEXT
         // --------------------------------------------
 
         if (box.type === "text") {
@@ -749,27 +742,47 @@ export function CanvasEditor({
             left: newLeft,
             top: newTop,
             width: newWidth,
-            angle: box.rotation,
-            opacity: box.opacity,
+
+            angle:
+              box.rotation,
+
+            opacity:
+              box.opacity,
+
+            visible:
+              box.visible,
+
+            selectable:
+              !box.locked,
+
+            fontSize:
+              box.fontSize,
+
+            fontFamily:
+              box.fontFamily,
+
+            fontWeight:
+              box.fontWeight,
+
+            fill:
+              box.color,
+
+            textAlign:
+              box.textAlign,
+
             scaleX: 1,
           });
 
           fabricObject.setCoords();
 
-          return;
+          continue;
         }
 
         // --------------------------------------------
-        // QR
+        // UPDATE QR
         // --------------------------------------------
 
         if (box.type === "qr") {
-          /*
-          * QR size is based on canvas WIDTH.
-          *
-          * This keeps the QR physically square
-          * even when the canvas itself is vertical.
-          */
           const qrSize =
             percentageToPixels(
               box.width,
@@ -777,30 +790,31 @@ export function CanvasEditor({
             );
 
           if (qrSize <= 0) {
-            return;
+            continue;
           }
 
           const baseWidth =
-            fabricObject.width ?? 0;
+            fabricObject.width ??
+            0;
 
           const baseHeight =
-            fabricObject.height ?? 0;
+            fabricObject.height ??
+            0;
 
           if (
             baseWidth <= 0 ||
             baseHeight <= 0
           ) {
-            return;
+            continue;
           }
 
-          /*
-          * Fabric QR image itself must remain square.
-          */
           const scaleX =
-            qrSize / baseWidth;
+            qrSize /
+            baseWidth;
 
           const scaleY =
-            qrSize / baseHeight;
+            qrSize /
+            baseHeight;
 
           fabricObject.set({
             left:
@@ -818,11 +832,14 @@ export function CanvasEditor({
             scaleX,
             scaleY,
 
-            angle: box.rotation,
+            angle:
+              box.rotation,
 
-            opacity: box.opacity,
+            opacity:
+              box.opacity,
 
-            visible: box.visible,
+            visible:
+              box.visible,
 
             selectable:
               !box.locked,
@@ -830,49 +847,99 @@ export function CanvasEditor({
 
           fabricObject.setCoords();
 
-          return;
+          continue;
         }
+      }
 
-        // --------------------------------------------
-        // OTHER OBJECTS
-        // --------------------------------------------
+      // ----------------------------------------------
+      // REMOVE stale Fabric objects
+      // ----------------------------------------------
 
-        fabricObject.set({
-          left:
-            percentageToPixels(
-              box.x,
-              width
-            ),
+      const templateBoxIds =
+        new Set(
+          template.boxes.map(
+            (box) => box.id
+          )
+        );
 
-          top:
-            percentageToPixels(
-              box.y,
-              height
-            ),
+      const objectsToRemove =
+        fabricCanvas
+          .getObjects()
+          .filter(
+            (object) => {
+              const data =
+                object.get("data");
 
-          angle: box.rotation,
+              if (
+                data?.isBackground ===
+                true
+              ) {
+                return false;
+              }
 
-          opacity: box.opacity,
+              const boxId =
+                data?.boxId;
 
-          visible: box.visible,
+              return (
+                typeof boxId ===
+                  "string" &&
+                !templateBoxIds.has(
+                  boxId
+                )
+              );
+            }
+          );
 
-          selectable:
-            !box.locked,
-        });
+      objectsToRemove.forEach(
+        (object) => {
+          fabricCanvas.remove(
+            object
+          );
+        }
+      );
 
-        fabricObject.setCoords();
-      });
+      // ----------------------------------------------
+      // Background always stays first
+      // ----------------------------------------------
 
-      canvas.renderAll();
-    }, [
-      template,
-      width,
-      height,
-    ]);
+      const backgroundObject =
+        fabricCanvas
+          .getObjects()
+          .find(
+            (object) =>
+              object
+                .get("data")
+                ?.isBackground ===
+              true
+          );
 
-  // --------------------------------------------------
-  // 7. Selection
-  // --------------------------------------------------
+      if (backgroundObject) {
+        fabricCanvas.moveObjectTo(
+          backgroundObject,
+          0
+        );
+      }
+
+      if (!cancelled) {
+        fabricCanvas.renderAll();
+      }
+    }
+
+    void reconcileCanvas();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    template,
+    previewData,
+    width,
+    height,
+  ]);
+
+  // ==================================================
+  // 5. Selection
+  // ==================================================
 
   useEffect(() => {
     const canvas =
@@ -942,9 +1009,9 @@ export function CanvasEditor({
     };
   }, [selectBox]);
 
-  // --------------------------------------------------
-  // 8. Object movement / resize
-  // --------------------------------------------------
+  // ==================================================
+  // 6. Object movement / resize
+  // ==================================================
 
   useEffect(() => {
     const canvas =
@@ -957,7 +1024,8 @@ export function CanvasEditor({
     const handleObjectModified = (
       event: ObjectModifiedEvent
     ) => {
-      const object = event.target;
+      const object =
+        event.target;
 
       if (!object) {
         return;
@@ -1122,10 +1190,6 @@ export function CanvasEditor({
       if (
         object.type === "image"
       ) {
-        /*
-         * Background images don't have a boxId.
-         * Only editable QR/image boxes reach here.
-         */
         const objectData =
           object.get("data");
 
@@ -1158,22 +1222,12 @@ export function CanvasEditor({
           return;
         }
 
-        // ------------------------------------------
-        // Actual rendered dimensions
-        // ------------------------------------------
-
         const actualWidth =
           baseWidth * scaleX;
 
         const actualHeight =
           baseHeight * scaleY;
 
-        /*
-         * QR must remain square.
-         *
-         * Take the smaller dimension so
-         * the QR cannot become distorted.
-         */
         const qrSize =
           Math.min(
             actualWidth,
@@ -1184,26 +1238,12 @@ export function CanvasEditor({
           return;
         }
 
-        /*
-         * Store QR size relative to canvas WIDTH.
-         *
-         * This is the important part.
-         *
-         * width = height
-         *
-         * in domain space.
-         */
         const qrSizePercentage =
           pixelsToPercentage(
             qrSize,
             width
           );
 
-        /*
-         * Normalize Fabric object.
-         *
-         * The image itself becomes square.
-         */
         const normalizedScaleX =
           qrSize /
           baseWidth;
@@ -1222,13 +1262,6 @@ export function CanvasEditor({
 
         object.setCoords();
 
-        /*
-         * Persist the same percentage
-         * for width and height.
-         *
-         * Both dimensions use the canvas
-         * width as their reference.
-         */
         updateBoxTransform(
           qrBoxId,
           {
@@ -1279,9 +1312,9 @@ export function CanvasEditor({
     height,
   ]);
 
-  // --------------------------------------------------
-  // 9. Keyboard movement
-  // --------------------------------------------------
+  // ==================================================
+  // 7. Keyboard movement
+  // ==================================================
 
   useEffect(() => {
     const handleKeyDown = (
@@ -1406,7 +1439,8 @@ export function CanvasEditor({
 
         fabricObject.setCoords();
 
-        fabricCanvasRef.current?.renderAll();
+        fabricCanvasRef.current
+          ?.renderAll();
       }
 
       updateBoxTransform(
@@ -1436,63 +1470,73 @@ export function CanvasEditor({
     height,
   ]);
 
+  // ==================================================
+  // 8. Backspace / Delete
+  // ==================================================
+
   useEffect(() => {
-  const handleKeyDown = (
-    event: KeyboardEvent
-  ) => {
-    const target = event.target as HTMLElement | null;
+    const handleKeyDown = (
+      event: KeyboardEvent
+    ) => {
+      const target =
+        event.target as
+          | HTMLElement
+          | null;
 
-    if (!target) {
-      return;
-    }
+      if (!target) {
+        return;
+      }
 
-    const tagName =
-      target.tagName.toLowerCase();
+      const tagName =
+        target.tagName.toLowerCase();
 
-    const isTyping =
-      tagName === "input" ||
-      tagName === "textarea" ||
-      tagName === "select" ||
-      target.isContentEditable;
+      const isTyping =
+        tagName === "input" ||
+        tagName === "textarea" ||
+        tagName === "select" ||
+        target.isContentEditable;
 
-    if (isTyping) {
-      return;
-    }
+      if (isTyping) {
+        return;
+      }
 
-    if (
-      event.key !== "Backspace" &&
-      event.key !== "Delete"
-    ) {
-      return;
-    }
+      if (
+        event.key !==
+          "Backspace" &&
+        event.key !==
+          "Delete"
+      ) {
+        return;
+      }
 
-    const selectedBoxId =
-      useEditorStore.getState()
-        .selectedBoxId;
+      const currentSelectedBoxId =
+        useEditorStore
+          .getState()
+          .selectedBoxId;
 
-    if (!selectedBoxId) {
-      return;
-    }
+      if (!currentSelectedBoxId) {
+        return;
+      }
 
-    event.preventDefault();
+      event.preventDefault();
 
-    useEditorStore
-      .getState()
-      .deleteBox(selectedBoxId);
-  };
+      deleteBox(
+        currentSelectedBoxId
+      );
+    };
 
-  window.addEventListener(
-    "keydown",
-    handleKeyDown
-  );
-
-  return () => {
-    window.removeEventListener(
+    window.addEventListener(
       "keydown",
       handleKeyDown
     );
-  };
-}, []);
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [deleteBox]);
 
   return (
     <canvas

@@ -79,5 +79,9 @@ export interface EditorActions {
   deleteBox: (
     boxId:string
   ) => void;
-  
+
+  undo: ()=> void;
+
+  redo: ()=>void;
+
 }

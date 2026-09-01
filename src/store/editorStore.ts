@@ -1,29 +1,36 @@
 import { create } from "zustand";
-
 import type { EditorActions } from "./editor.actions";
 import type { EditorState } from "./editor.types";
+import type {TextBox, QRBox, } from "../domain/box/box.types";
+import type {TextVariable, QRVariable, } from "../domain/variables/variables.types";
+import { VARIABLE_DEFINITIONS, } from "../domain/variables/variable.definitions";
+import { VARIABLE_DEFAULTS, } from "../domain/variables/variable.defaults";
+import { findAvailableBoxPlacement, } from "../editor/placement/boxPlacement";
+import type { Template } from "../domain/template/template.types";
 
-import type {
-  TextBox,
-  QRBox,
-} from "../domain/box/box.types";
+const MAX_HISTORY = 50;
+const cloneTemplate = (template: Template): Template => {
+  return structuredClone(template);
+};
 
-import type {
-  TextVariable,
-  QRVariable,
-} from "../domain/variables/variables.types";
+const recordHistory = (
+  state: EditorState,
+  template: Template
+): Pick<EditorState, "past" | "future"> => {
+  const newPast = [
+    ...state.past,
+    cloneTemplate(template),
+  ];
 
-import {
-  VARIABLE_DEFINITIONS,
-} from "../domain/variables/variable.definitions";
+  return {
+    past:
+      newPast.length > MAX_HISTORY
+        ? newPast.slice(-MAX_HISTORY)
+        : newPast,
 
-import {
-  VARIABLE_DEFAULTS,
-} from "../domain/variables/variable.defaults";
-
-import {
-  findAvailableBoxPlacement,
-} from "../editor/placement/boxPlacement";
+    future: [],
+  };
+};
 
 const initialState: EditorState = {
   template: null,
@@ -48,6 +55,9 @@ const initialState: EditorState = {
   isSaving: false,
 
   error: null,
+
+  past: [],
+  future: [],
 };
 
 export const useEditorStore = create<
@@ -539,40 +549,189 @@ export const useEditorStore = create<
     // Delete Box
     // --------------------------------------------------
     deleteBox: (boxId) =>
-    set((state) => {
-      if (!state.template) {
-        return state;
+  set((state) => {
+    if (!state.template) {
+      return state;
+    }
+
+    const boxExists =
+      state.template.boxes.some(
+        (box) => box.id === boxId
+      );
+
+    if (!boxExists) {
+      return state;
+    }
+
+    const history =
+      recordHistory(
+        state,
+        state.template
+      );
+
+    const boxes =
+      state.template.boxes.filter(
+        (box) => box.id !== boxId
+      );
+
+    return {
+      template: {
+        ...state.template,
+        boxes,
+        updatedAt:
+          new Date().toISOString(),
+      },
+
+      ...history,
+
+      selectedBoxId:
+        state.selectedBoxId === boxId
+          ? null
+          : state.selectedBoxId,
+
+      isDirty: true,
+    };
+  }),
+
+  undo: () =>
+  set((state) => {
+    if (
+      !state.template ||
+      state.past.length === 0
+    ) {
+      return state;
+    }
+
+     console.log(
+      "UNDO REQUESTED",
+      {
+        currentBoxes:
+          state.template?.boxes.map(
+            (box) => ({
+              id: box.id,
+              type: box.type,
+              variable:
+                "variable" in box
+                  ? box.variable
+                  : undefined,
+            })
+          ),
+
+        pastLength:
+          state.past.length,
+
+        futureLength:
+          state.future.length,
       }
+    );
+    
+    const previousTemplate =
+      state.past[
+        state.past.length - 1
+      ];
 
-      const boxExists =
-        state.template.boxes.some(
-          (box) => box.id === boxId
-        );
+    const remainingPast =
+      state.past.slice(
+        0,
+        state.past.length - 1
+      );
 
-      if (!boxExists) {
-        return state;
-      }
+    console.log(
+  "UNDO RESTORING",
+  {
+    previousBoxes:
+      previousTemplate.boxes.map(
+        (box) => ({
+          id: box.id,
+          type: box.type,
+          variable:
+            "variable" in box
+              ? box.variable
+              : undefined,
+        })
+      ),
 
-      const boxes =
-        state.template.boxes.filter(
-          (box) => box.id !== boxId
-        );
+    newTemplateLoadVersion:
+      state.templateLoadVersion + 1,
+  }
+);
 
-      return {
-        template: {
-          ...state.template,
-          boxes,
-          updatedAt:
-            new Date().toISOString(),
-        },
+    return {
+      past: remainingPast,
 
-        selectedBoxId:
-          state.selectedBoxId === boxId
-            ? null
-            : state.selectedBoxId,
+      future: [
+        ...state.future,
+        cloneTemplate(
+          state.template
+        ),
+      ],
 
-        isDirty: true,
-      };
-    }),
+      template:
+        cloneTemplate(
+          previousTemplate
+        ),
+
+      /*
+       * Undo restores an entire document
+       * snapshot, so force the canvas to
+       * rebuild from that snapshot.
+       */
+      templateLoadVersion:
+        state.templateLoadVersion + 1,
+
+      selectedBoxId: null,
+
+      isDirty: true,
+    };
+  }),
+
+  redo: () =>
+  set((state) => {
+    if (
+      !state.template ||
+      state.future.length === 0
+    ) {
+      return state;
+    }
+
+    const nextTemplate =
+      state.future[
+        state.future.length - 1
+      ];
+
+    const remainingFuture =
+      state.future.slice(
+        0,
+        state.future.length - 1
+      );
+
+    return {
+      past: [
+        ...state.past,
+        cloneTemplate(
+          state.template
+        ),
+      ],
+
+      future: remainingFuture,
+
+      template:
+        cloneTemplate(
+          nextTemplate
+        ),
+
+      /*
+       * Redo also restores an entire
+       * document snapshot.
+       */
+      templateLoadVersion:
+        state.templateLoadVersion + 1,
+
+      selectedBoxId: null,
+
+      isDirty: true,
+    };
+  }),
+
 
 }));
