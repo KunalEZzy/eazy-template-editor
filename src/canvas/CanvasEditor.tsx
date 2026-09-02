@@ -793,13 +793,14 @@ export function CanvasEditor({
             continue;
           }
 
+          const objectData =
+            fabricObject.get("data");
+
           const baseWidth =
-            fabricObject.width ??
-            0;
+            objectData?.baseWidth ?? fabricObject.width ?? 0;
 
           const baseHeight =
-            fabricObject.height ??
-            0;
+            objectData?.baseHeight ?? fabricObject.height ?? 0;
 
           if (
             baseWidth <= 0 ||
@@ -1210,10 +1211,10 @@ export function CanvasEditor({
           object.scaleY ?? 1;
 
         const baseWidth =
-          object.width ?? 0;
+          objectData?.baseWidth ?? object.width ?? 0;
 
         const baseHeight =
-          object.height ?? 0;
+          objectData?.baseHeight ?? object.height ?? 0;
 
         if (
           baseWidth <= 0 ||

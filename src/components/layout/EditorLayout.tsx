@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useEditorStore } from "../../store/editorStore";
 import { CanvasEditor } from "../../canvas/CanvasEditor";
 import { mockPreviewData } from "../../domain/variables/preview.mock";
@@ -7,23 +7,17 @@ import { LocalTemplateRepository } from "../../repository/LocalTemplateRepositor
 import { EditorHeader } from "./EditorHeader";
 import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
+import { calculateCanvasDisplaySize } from "../../utils/canvasDimensions";
+
 
 const repository = new LocalTemplateRepository();
 const editorService = new EditorService(repository);
 
+const MAIN_PADDING = 32;
+const CANVAS_WRAPPER_PADDING = 12;
+
 export function EditorLayout() {
   const template = useEditorStore((state) => state.template);
-  console.log(
-  "EDITOR LAYOUT BOXES:",
-  template?.boxes.map((box) => ({
-    id: box.id,
-    type: box.type,
-    variable:
-      box.type === "text" || box.type === "qr"
-        ? box.variable
-        : null,
-  }))
-);
   const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
   const isSaving = useEditorStore((state) => state.isSaving);
   const isDirty = useEditorStore((state) => state.isDirty);
@@ -49,6 +43,15 @@ export function EditorLayout() {
     return true; // default to dark
   });
 
+  const [workspaceSize, setWorkspaceSize] =
+  useState({
+    width: 0,
+    height: 0,
+  });
+
+  const workspaceRef =
+    useRef<HTMLElement | null>(null);
+
   const toggleTheme = () => {
     setIsDark((prev) => {
       const next = !prev;
@@ -66,17 +69,11 @@ export function EditorLayout() {
       setSaving(true);
       setError(null);
 
-      console.log("TEMPLATE BEING SAVED:", template);
-
       const savedTemplate =
         await editorService.saveTemplate(
           template
         );
 
-      console.log(
-        "TEMPLATE RETURNED FROM SAVE:",
-        savedTemplate
-      );
 
       setTemplate(savedTemplate);
     } catch (error) {
@@ -166,9 +163,94 @@ export function EditorLayout() {
     };
   }, [undo, redo]);
 
+  useEffect(() => {
+  const workspace =
+    workspaceRef.current;
+
+  if (!workspace) {
+    return;
+  }
+
+  const observer =
+    new ResizeObserver((entries) => {
+      const entry = entries[0];
+
+      if (!entry) {
+        return;
+      }
+
+      const {
+        width,
+        height,
+      } = entry.contentRect;
+
+      setWorkspaceSize({
+        width,
+        height,
+      });
+    });
+
+  observer.observe(workspace);
+
+  return () => {
+    observer.disconnect();
+  };
+}, []);
+
   if (!template) {
     return null;
   }
+
+const totalHorizontalPadding =
+  MAIN_PADDING * 2 +
+  CANVAS_WRAPPER_PADDING * 2;
+
+const totalVerticalPadding =
+  MAIN_PADDING * 2 +
+  CANVAS_WRAPPER_PADDING * 2;
+
+const availableCanvasWidth =
+  Math.max(
+    0,
+    workspaceSize.width -
+      totalHorizontalPadding
+  );
+
+const availableCanvasHeight =
+  Math.max(
+    0,
+    workspaceSize.height -
+      totalVerticalPadding
+  );
+
+const canvasDisplaySize =
+  calculateCanvasDisplaySize({
+    documentWidth:
+      template.settings.canvasWidth,
+
+    documentHeight:
+      template.settings.canvasHeight,
+
+    availableWidth:
+      availableCanvasWidth,
+
+    availableHeight:
+      availableCanvasHeight,
+  });
+
+  console.log(
+  "CANVAS DISPLAY SIZE:",
+  {
+    workspace: workspaceSize,
+
+    available: {
+      width: availableCanvasWidth,
+      height: availableCanvasHeight,
+    },
+
+    display: canvasDisplaySize,
+  }
+);
 
   // Core Design Tokens mapping dynamically based on current theme mode
   const tokens = {
@@ -189,6 +271,7 @@ export function EditorLayout() {
       ? "0 10px 25px -5px rgba(0,0,0,0.6), 0 8px 10px -6px rgba(0,0,0,0.6)"
       : "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)"
   };
+
 
   return (
     <div
@@ -241,12 +324,13 @@ export function EditorLayout() {
 
         {/* Center Panel - Workbench & Canvas View */}
         <main
+          ref={workspaceRef}
           style={{
             flex: 1,
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            padding: "32px",
+            padding:`${MAIN_PADDING}px`,
             overflow: "auto",
             boxSizing: "border-box",
             // Dynamic checkboard style grid pattern
@@ -258,7 +342,7 @@ export function EditorLayout() {
           {/* Canvas Wrapper Card */}
           <div
             style={{
-              padding: "12px",
+              padding: `${CANVAS_WRAPPER_PADDING}px`,
               background: tokens.panelBg,
               borderRadius: "10px",
               border: `1px solid ${tokens.border}`,
@@ -270,8 +354,8 @@ export function EditorLayout() {
             }}
           >
             <CanvasEditor
-              width={600}
-              height={800}
+              width={canvasDisplaySize.width}
+              height={canvasDisplaySize.height}
               template={template}
               previewData={mockPreviewData}
             />

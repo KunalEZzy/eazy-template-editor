@@ -206,6 +206,8 @@ export async function qrBoxToFabric(
 
     data: {
       boxId: box.id,
+      baseWidth: imageWidth,
+      baseHeight: imageHeight,
     },
   });
 
