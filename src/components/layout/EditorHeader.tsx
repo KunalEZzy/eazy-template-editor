@@ -38,6 +38,10 @@ export function EditorHeader({
   onToggleTheme,
   onSave,
 }: EditorHeaderProps) {
+  const handleDownload = () => {
+    window.dispatchEvent(new CustomEvent("eazy:export-canvas"));
+  };
+
   return (
     <header
       style={{
@@ -50,7 +54,7 @@ export function EditorHeader({
         height: "60px",
         boxSizing: "border-box",
         zIndex: 10,
-        transition: "background-color 0.2s, border-color 0.2s"
+        transition: "background-color 0.2s, border-color 0.2s",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -66,7 +70,7 @@ export function EditorHeader({
             justifyContent: "center",
             fontWeight: "bold",
             color: "#fff",
-            fontSize: "14px"
+            fontSize: "14px",
           }}
         >
           E
@@ -79,7 +83,7 @@ export function EditorHeader({
               fontWeight: 600,
               color: tokens.textActive,
               letterSpacing: "-0.2px",
-              textAlign: "left"
+              textAlign: "left",
             }}
           >
             {template.name}
@@ -89,10 +93,11 @@ export function EditorHeader({
               margin: "1px 0 0",
               color: tokens.text,
               fontSize: "11px",
-              textAlign: "left"
+              textAlign: "left",
             }}
           >
-            Campaign: <span style={{ color: tokens.textActive }}>{template.campaign}</span>
+            Campaign: <span style={{ color: tokens.textActive }}>{template.campaign}</span>{" "}
+            ({template.settings.canvasWidth} × {template.settings.canvasHeight}px)
           </p>
         </div>
       </div>
@@ -106,7 +111,7 @@ export function EditorHeader({
             height: "8px",
             borderRadius: "50%",
             backgroundColor: isDirty ? "#d97706" : "#10b981",
-            boxShadow: isDirty ? "0 0 8px #d97706" : "0 0 8px #10b981"
+            boxShadow: isDirty ? "0 0 8px #d97706" : "0 0 8px #10b981",
           }}
         />
         <span style={{ fontSize: "12px", fontWeight: 500, color: tokens.text }}>
@@ -118,6 +123,7 @@ export function EditorHeader({
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         {/* Light/Dark Toggle Switch */}
         <button
+          type="button"
           onClick={onToggleTheme}
           style={{
             display: "flex",
@@ -132,7 +138,7 @@ export function EditorHeader({
             fontSize: "12px",
             fontWeight: 500,
             color: tokens.textActive,
-            transition: "all 0.2s"
+            transition: "all 0.2s",
           }}
           title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
@@ -147,14 +153,38 @@ export function EditorHeader({
               background: tokens.toolBtnBg,
               padding: "4px 8px",
               borderRadius: "4px",
-              border: `1px solid ${tokens.toolBtnBorder}`
+              border: `1px solid ${tokens.toolBtnBorder}`,
             }}
           >
             Selected: <strong style={{ color: tokens.textActive }}>{selectedBoxId}</strong>
           </div>
         )}
 
+        {/* Export / Download PNG Button */}
         <button
+          type="button"
+          onClick={handleDownload}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "6px 14px",
+            backgroundColor: tokens.toolBtnBg,
+            border: `1px solid ${tokens.toolBtnBorder}`,
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: "13px",
+            color: tokens.textActive,
+            transition: "all 0.2s",
+          }}
+          title="Download high-resolution image"
+        >
+          ⬇️ Download PNG
+        </button>
+
+        <button
+          type="button"
           onClick={onSave}
           disabled={!isDirty || isSaving}
           style={{
@@ -172,7 +202,7 @@ export function EditorHeader({
             fontWeight: 600,
             fontSize: "13px",
             boxShadow: isDirty ? "0 2px 4px rgba(124, 58, 237, 0.3)" : "none",
-            transition: "all 0.2s"
+            transition: "all 0.2s",
           }}
         >
           {isSaving ? (
@@ -184,7 +214,7 @@ export function EditorHeader({
                   border: `2px solid ${isDirty ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.1)"}`,
                   borderTopColor: isDirty ? "#fff" : tokens.textActive,
                   borderRadius: "50%",
-                  animation: "spin 0.8s linear infinite"
+                  animation: "spin 0.8s linear infinite",
                 }}
               />
               Saving

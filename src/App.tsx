@@ -51,11 +51,6 @@ function App() {
             TEMPLATE_ID
           );
 
-        console.log(
-          "LOADED TEMPLATE:",
-          template
-        );
-
         setTemplate(template);
       } catch (error) {
         console.error(

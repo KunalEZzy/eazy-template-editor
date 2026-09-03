@@ -9,18 +9,19 @@ import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { calculateCanvasDisplaySize } from "../../utils/canvasDimensions";
 
-
 const repository = new LocalTemplateRepository();
 const editorService = new EditorService(repository);
 
 const MAIN_PADDING = 32;
-const CANVAS_WRAPPER_PADDING = 12;
 
 export function EditorLayout() {
   const template = useEditorStore((state) => state.template);
   const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
   const isSaving = useEditorStore((state) => state.isSaving);
   const isDirty = useEditorStore((state) => state.isDirty);
+  const temporaryBackgroundImageUrl = useEditorStore(
+    (state) => state.temporaryBackgroundImageUrl
+  );
   const setTemplate = useEditorStore((state) => state.setTemplate);
   const selectBox = useEditorStore((state) => state.selectBox);
   const updateTextBox = useEditorStore((state) => state.updateTextBox);
@@ -43,14 +44,12 @@ export function EditorLayout() {
     return true; // default to dark
   });
 
-  const [workspaceSize, setWorkspaceSize] =
-  useState({
+  const [availableWorkspace, setAvailableWorkspace] = useState({
     width: 0,
     height: 0,
   });
 
-  const workspaceRef =
-    useRef<HTMLElement | null>(null);
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
 
   const toggleTheme = () => {
     setIsDark((prev) => {
@@ -69,188 +68,118 @@ export function EditorLayout() {
       setSaving(true);
       setError(null);
 
-      const savedTemplate =
-        await editorService.saveTemplate(
-          template
-        );
+      const templateToSave =
+        temporaryBackgroundImageUrl !== null
+          ? {
+              ...template,
+              background: {
+                ...template.background,
+                imageUrl: temporaryBackgroundImageUrl,
+              },
+            }
+          : template;
 
-
+      const savedTemplate = await editorService.saveTemplate(templateToSave);
       setTemplate(savedTemplate);
     } catch (error) {
-      console.error(
-        "Failed to save template:",
-        error
-      );
-
+      console.error("Failed to save template:", error);
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to save template"
+        error instanceof Error ? error.message : "Failed to save template"
       );
     } finally {
       setSaving(false);
     }
   };
 
-    useEffect(() => {
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const isMac =
-        navigator.platform.toUpperCase().includes("MAC");
-
-      const modifierKey = isMac
-        ? event.metaKey
-        : event.ctrlKey;
+      const isMac = navigator.platform.toUpperCase().includes("MAC");
+      const modifierKey = isMac ? event.metaKey : event.ctrlKey;
 
       if (!modifierKey) {
         return;
       }
 
-      // --------------------------------------------
-      // Undo
-      // Cmd + Z / Ctrl + Z
-      // --------------------------------------------
-
-      if (
-        event.key.toLowerCase() === "z" &&
-        !event.shiftKey
-      ) {
+      // Undo: Cmd + Z / Ctrl + Z
+      if (event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
         undo();
         return;
       }
 
-      // --------------------------------------------
-      // Redo
-      // Cmd + Shift + Z / Ctrl + Shift + Z
-      // --------------------------------------------
-
-      if (
-        event.key.toLowerCase() === "z" &&
-        event.shiftKey
-      ) {
+      // Redo: Cmd + Shift + Z / Ctrl + Shift + Z
+      if (event.key.toLowerCase() === "z" && event.shiftKey) {
         event.preventDefault();
         redo();
         return;
       }
 
-      // --------------------------------------------
-      // Redo
-      // Ctrl + Y
-      //
-      // Common Windows/Linux shortcut.
-      // We don't use Cmd + Y on macOS.
-      // --------------------------------------------
-
-      if (
-        !isMac &&
-        event.key.toLowerCase() === "y"
-      ) {
+      // Redo: Ctrl + Y (Windows/Linux)
+      if (!isMac && event.key.toLowerCase() === "y") {
         event.preventDefault();
         redo();
       }
     };
 
-    window.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
-
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
-      window.removeEventListener(
-        "keydown",
-        handleKeyDown
-      );
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [undo, redo]);
 
   useEffect(() => {
-  const workspace =
-    workspaceRef.current;
+    const workspace = workspaceRef.current;
+    if (!workspace) {
+      return;
+    }
 
-  if (!workspace) {
-    return;
-  }
+    const updateWorkspaceSize = () => {
+      const rect = workspace.getBoundingClientRect();
+      const width = Math.max(0, Math.floor(rect.width - MAIN_PADDING * 2));
+      const height = Math.max(0, Math.floor(rect.height - MAIN_PADDING * 2));
 
-  const observer =
-    new ResizeObserver((entries) => {
+      setAvailableWorkspace((previous) => {
+        if (previous.width === width && previous.height === height) {
+          return previous;
+        }
+        return { width, height };
+      });
+    };
+
+    updateWorkspaceSize();
+
+    const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
+      if (!entry) return;
 
-      if (!entry) {
-        return;
-      }
+      const width = Math.floor(entry.contentRect.width);
+      const height = Math.floor(entry.contentRect.height);
 
-      const {
-        width,
-        height,
-      } = entry.contentRect;
-
-      setWorkspaceSize({
-        width,
-        height,
+      setAvailableWorkspace((previous) => {
+        if (previous.width === width && previous.height === height) {
+          return previous;
+        }
+        return { width, height };
       });
     });
 
-  observer.observe(workspace);
+    observer.observe(workspace);
 
-  return () => {
-    observer.disconnect();
-  };
-}, []);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   if (!template) {
     return null;
   }
 
-const totalHorizontalPadding =
-  MAIN_PADDING * 2 +
-  CANVAS_WRAPPER_PADDING * 2;
-
-const totalVerticalPadding =
-  MAIN_PADDING * 2 +
-  CANVAS_WRAPPER_PADDING * 2;
-
-const availableCanvasWidth =
-  Math.max(
-    0,
-    workspaceSize.width -
-      totalHorizontalPadding
-  );
-
-const availableCanvasHeight =
-  Math.max(
-    0,
-    workspaceSize.height -
-      totalVerticalPadding
-  );
-
-const canvasDisplaySize =
-  calculateCanvasDisplaySize({
-    documentWidth:
-      template.settings.canvasWidth,
-
-    documentHeight:
-      template.settings.canvasHeight,
-
-    availableWidth:
-      availableCanvasWidth,
-
-    availableHeight:
-      availableCanvasHeight,
+  const canvasDisplaySize = calculateCanvasDisplaySize({
+    documentWidth: template.settings.canvasWidth,
+    documentHeight: template.settings.canvasHeight,
+    availableWidth: availableWorkspace.width,
+    availableHeight: availableWorkspace.height,
   });
-
-  console.log(
-  "CANVAS DISPLAY SIZE:",
-  {
-    workspace: workspaceSize,
-
-    available: {
-      width: availableCanvasWidth,
-      height: availableCanvasHeight,
-    },
-
-    display: canvasDisplaySize,
-  }
-);
 
   // Core Design Tokens mapping dynamically based on current theme mode
   const tokens = {
@@ -269,9 +198,8 @@ const canvasDisplaySize =
     toolBtnBorder: isDark ? "#3e3e3e" : "#e5e7eb",
     shadow: isDark
       ? "0 10px 25px -5px rgba(0,0,0,0.6), 0 8px 10px -6px rgba(0,0,0,0.6)"
-      : "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)"
+      : "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
   };
-
 
   return (
     <div
@@ -283,10 +211,11 @@ const canvasDisplaySize =
         width: "100%",
         overflow: "hidden",
         boxSizing: "border-box",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
+        fontFamily:
+          "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
         backgroundColor: tokens.bg,
         color: tokens.text,
-        transition: "background-color 0.2s, color 0.2s"
+        transition: "background-color 0.2s, color 0.2s",
       }}
     >
       {/* Top Navigation Bar */}
@@ -308,7 +237,7 @@ const canvasDisplaySize =
           flex: 1,
           overflow: "hidden",
           background: tokens.bg,
-          transition: "background-color 0.2s"
+          transition: "background-color 0.2s",
         }}
       >
         {/* Left Sidebar: Layers list & Action Panel */}
@@ -324,41 +253,72 @@ const canvasDisplaySize =
 
         {/* Center Panel - Workbench & Canvas View */}
         <main
-          ref={workspaceRef}
           style={{
             flex: 1,
+            minWidth: 0,
+            minHeight: 0,
             display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding:`${MAIN_PADDING}px`,
-            overflow: "auto",
+            position: "relative",
+            overflow: "hidden",
             boxSizing: "border-box",
-            // Dynamic checkboard style grid pattern
             backgroundImage: `radial-gradient(${tokens.gridDot} 1px, transparent 0)`,
             backgroundSize: "24px 24px",
-            transition: "background-image 0.2s"
+            transition: "background-color 0.2s, background-image 0.2s",
           }}
         >
-          {/* Canvas Wrapper Card */}
+          {/* Inner measurement & alignment container */}
           <div
+            ref={workspaceRef}
             style={{
-              padding: `${CANVAS_WRAPPER_PADDING}px`,
-              background: tokens.panelBg,
-              borderRadius: "10px",
-              border: `1px solid ${tokens.border}`,
-              boxShadow: tokens.shadow,
+              flex: 1,
+              minWidth: 0,
+              minHeight: 0,
+              width: "100%",
+              height: "100%",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              transition: "all 0.2s"
+              padding: `${MAIN_PADDING}px`,
+              overflow: "hidden",
+              boxSizing: "border-box",
             }}
           >
-            <CanvasEditor
-              width={canvasDisplaySize.width}
-              height={canvasDisplaySize.height}
-              template={template}
-              previewData={mockPreviewData}
-            />
+            {canvasDisplaySize.scale > 0 && (
+              /* DISPLAY VIEWPORT: Sized to scaled dimensions */
+              <div
+                style={{
+                  width: `${canvasDisplaySize.width}px`,
+                  height: `${canvasDisplaySize.height}px`,
+                  position: "relative",
+                  borderRadius: "10px",
+                  border: `1px solid ${tokens.border}`,
+                  boxShadow: tokens.shadow,
+                  overflow: "hidden",
+                  background: tokens.panelBg,
+                  flexShrink: 0,
+                  transition:
+                    "border-color 0.2s, box-shadow 0.2s, background-color 0.2s",
+                }}
+              >
+                {/* DOCUMENT SCALE CONTAINER: Document dimensions scaled visually via CSS */}
+                <div
+                  style={{
+                    width: `${template.settings.canvasWidth}px`,
+                    height: `${template.settings.canvasHeight}px`,
+                    transform: `scale(${canvasDisplaySize.scale})`,
+                    transformOrigin: "top left",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                  }}
+                >
+                  <CanvasEditor
+                    template={template}
+                    previewData={mockPreviewData}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </main>
 

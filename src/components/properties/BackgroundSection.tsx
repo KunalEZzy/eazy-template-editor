@@ -7,34 +7,24 @@ import {
 import { useEditorStore } from "../../store/editorStore";
 
 export function BackgroundSection() {
-  const fileInputRef =
-    useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const template = useEditorStore(
-    (state) => state.template
+  const template = useEditorStore((state) => state.template);
+  const temporaryBackgroundImageUrl = useEditorStore(
+    (state) => state.temporaryBackgroundImageUrl
   );
-
-  const temporaryBackgroundImageUrl =
-    useEditorStore(
-      (state) => state.temporaryBackgroundImageUrl
-    );
-
-  const setTemporaryBackgroundImage =
-    useEditorStore(
-      (state) => state.setTemporaryBackgroundImage
-    );
+  const setTemporaryBackgroundImage = useEditorStore(
+    (state) => state.setTemporaryBackgroundImage
+  );
 
   /*
    * Release the previous object URL when the
-   * temporary background changes or the component
-   * unmounts.
+   * temporary background changes or the component unmounts.
    */
   useEffect(() => {
     return () => {
       if (temporaryBackgroundImageUrl) {
-        URL.revokeObjectURL(
-          temporaryBackgroundImageUrl
-        );
+        URL.revokeObjectURL(temporaryBackgroundImageUrl);
       }
     };
   }, [temporaryBackgroundImageUrl]);
@@ -43,30 +33,22 @@ export function BackgroundSection() {
     return null;
   }
 
-  const savedBackgroundUrl =
-    template.background.imageUrl;
+  const savedBackgroundUrl = template.background.imageUrl;
 
   /*
-   * Temporary background takes priority over the
-   * currently saved background.
+   * Temporary background takes priority over the currently saved background.
    */
   const currentBackgroundUrl =
-    temporaryBackgroundImageUrl ??
-    savedBackgroundUrl;
+    temporaryBackgroundImageUrl ?? savedBackgroundUrl;
 
-  const hasBackground =
-    Boolean(currentBackgroundUrl);
-
-  const isTemporary =
-    Boolean(temporaryBackgroundImageUrl);
+  const hasBackground = Boolean(currentBackgroundUrl);
+  const isTemporary = Boolean(temporaryBackgroundImageUrl);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (
-    event: ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -78,10 +60,24 @@ export function BackgroundSection() {
       return;
     }
 
-    const objectUrl =
-      URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    const img = new window.Image();
 
-    setTemporaryBackgroundImage(objectUrl);
+    img.onload = () => {
+      const width = img.naturalWidth;
+      const height = img.naturalHeight;
+      if (width > 0 && height > 0) {
+        setTemporaryBackgroundImage(objectUrl, { width, height });
+      } else {
+        setTemporaryBackgroundImage(objectUrl);
+      }
+    };
+
+    img.onerror = () => {
+      setTemporaryBackgroundImage(objectUrl);
+    };
+
+    img.src = objectUrl;
 
     /*
      * Allows the user to select the same file again.
@@ -109,11 +105,7 @@ export function BackgroundSection() {
       </h3>
 
       {hasBackground && currentBackgroundUrl ? (
-        <div
-          style={{
-            marginBottom: "10px",
-          }}
-        >
+        <div style={{ marginBottom: "10px" }}>
           <img
             src={currentBackgroundUrl}
             alt="Template background"
@@ -123,8 +115,7 @@ export function BackgroundSection() {
               maxHeight: "160px",
               objectFit: "cover",
               borderRadius: "6px",
-              border:
-                "1px solid var(--border)",
+              border: "1px solid var(--border)",
             }}
           />
 
@@ -136,7 +127,7 @@ export function BackgroundSection() {
                 color: "var(--text)",
               }}
             >
-              Unsaved background
+              Unsaved background ({template.settings.canvasWidth} × {template.settings.canvasHeight})
             </div>
           )}
         </div>
@@ -146,8 +137,7 @@ export function BackgroundSection() {
             padding: "16px 8px",
             marginBottom: "10px",
             textAlign: "center",
-            border:
-              "1px dashed var(--border)",
+            border: "1px dashed var(--border)",
             borderRadius: "6px",
             fontSize: "11px",
             color: "var(--text)",
@@ -167,12 +157,7 @@ export function BackgroundSection() {
         }}
       />
 
-      <div
-        style={{
-          display: "flex",
-          gap: "6px",
-        }}
-      >
+      <div style={{ display: "flex", gap: "6px" }}>
         <button
           type="button"
           onClick={handleUploadClick}
@@ -180,19 +165,15 @@ export function BackgroundSection() {
             flex: 1,
             padding: "7px 8px",
             borderRadius: "5px",
-            border:
-              "1px solid var(--border)",
-            background:
-              "var(--tool-btn-bg)",
+            border: "1px solid var(--border)",
+            background: "var(--tool-btn-bg)",
             color: "var(--text)",
             cursor: "pointer",
             fontSize: "11px",
             fontWeight: 600,
           }}
         >
-          {hasBackground
-            ? "Change Image"
-            : "Upload Image"}
+          {hasBackground ? "Change Image" : "Upload Image"}
         </button>
 
         {hasBackground && (
@@ -202,10 +183,8 @@ export function BackgroundSection() {
             style={{
               padding: "7px 10px",
               borderRadius: "5px",
-              border:
-                "1px solid var(--border)",
-              background:
-                "var(--tool-btn-bg)",
+              border: "1px solid var(--border)",
+              background: "var(--tool-btn-bg)",
               color: "var(--text)",
               cursor: "pointer",
               fontSize: "11px",

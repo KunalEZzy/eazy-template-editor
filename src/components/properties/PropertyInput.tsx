@@ -1,7 +1,4 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useState } from "react";
 
 export interface PropertyInputProps {
   label?: string;
@@ -13,17 +10,10 @@ export interface PropertyInputProps {
   style?: React.CSSProperties;
 }
 
-function formatNumber(
-  value: number,
-  step: string
-): string {
+function formatNumber(value: number, step: string): string {
   if (step.includes(".")) {
-    const decimals =
-      step.split(".")[1]?.length ?? 0;
-
-    return parseFloat(
-      value.toFixed(decimals)
-    ).toString();
+    const decimals = step.split(".")[1]?.length ?? 0;
+    return parseFloat(value.toFixed(decimals)).toString();
   }
 
   return value.toString();
@@ -38,82 +28,35 @@ export function PropertyInput({
   onChange,
   style,
 }: PropertyInputProps) {
-  const [
-    localVal,
-    setLocalVal,
-  ] = useState(() =>
-    formatNumber(value, step)
-  );
+  const [prevValue, setPrevValue] = useState(value);
+  const [localVal, setLocalVal] = useState(() => formatNumber(value, step));
 
-  /*
-   * We only synchronize when the external
-   * value has actually changed.
-   *
-   * This is needed because the value can change
-   * from:
-   * - mouse drag
-   * - keyboard movement
-   * - another property
-   * - selecting another object
-   */
-  useEffect(() => {
-    const parsed =
-      parseFloat(localVal);
+  // Sync state when external prop value changes without triggering cascading render warnings in useEffect
+  if (prevValue !== value) {
+    setPrevValue(value);
+    setLocalVal(formatNumber(value, step));
+  }
 
-    if (
-      Number.isNaN(parsed) ||
-      Math.abs(
-        parsed - value
-      ) > 0.001
-    ) {
-      setLocalVal(
-        formatNumber(
-          value,
-          step
-        )
-      );
-    }
-  }, [value, step, localVal]);
-
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const raw =
-      event.target.value;
-
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = event.target.value;
     setLocalVal(raw);
 
-    const parsed =
-      parseFloat(raw);
-
+    const parsed = parseFloat(raw);
     if (!Number.isNaN(parsed)) {
       onChange(parsed);
     }
   };
 
   const handleBlur = () => {
-    const parsed =
-      parseFloat(localVal);
+    const parsed = parseFloat(localVal);
 
     if (Number.isNaN(parsed)) {
-      setLocalVal(
-        formatNumber(
-          value,
-          step
-        )
-      );
-
+      setLocalVal(formatNumber(value, step));
       return;
     }
 
     onChange(parsed);
-
-    setLocalVal(
-      formatNumber(
-        parsed,
-        step
-      )
-    );
+    setLocalVal(formatNumber(parsed, step));
   };
 
   return (
@@ -151,10 +94,7 @@ export function PropertyInput({
         onChange={handleChange}
         onBlur={handleBlur}
         style={{
-          paddingLeft:
-            label
-              ? "24px"
-              : "8px",
+          paddingLeft: label ? "24px" : "8px",
         }}
       />
     </div>
@@ -176,23 +116,16 @@ export function PropertyTextInput({
   onChange,
   style,
 }: PropertyTextInputProps) {
-  const [
-    localVal,
-    setLocalVal,
-  ] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
+  const [localVal, setLocalVal] = useState(value);
 
-  useEffect(() => {
-    if (localVal !== value) {
-      setLocalVal(value);
-    }
-  }, [value, localVal]);
+  if (prevValue !== value) {
+    setPrevValue(value);
+    setLocalVal(value);
+  }
 
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const raw =
-      event.target.value;
-
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = event.target.value;
     setLocalVal(raw);
     onChange(raw);
   };
