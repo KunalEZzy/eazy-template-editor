@@ -52,15 +52,24 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   // Template
   // --------------------------------------------------
 
-  setTemplate: (template) =>
-    set((state) => ({
-      template,
-      templateLoadVersion: state.templateLoadVersion + 1,
-      temporaryBackgroundImageUrl: null,
-      selectedBoxId: null,
-      isDirty: false,
-      error: null,
-    })),
+setTemplate: (template) =>
+  set((state) => ({
+    template,
+    templateLoadVersion:
+      state.templateLoadVersion + 1,
+
+    temporaryBackgroundImageUrl: null,
+
+    selectedBoxId: null,
+
+    isDirty: false,
+
+    error: null,
+
+    past: [],
+
+    future: [],
+  })),
 
   // --------------------------------------------------
   // Selection
@@ -75,18 +84,28 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   // Text Box
   // --------------------------------------------------
 
-  updateTextBox: (boxId, changes) =>
-    set((state) => {
-      if (!state.template) {
-        return state;
-      }
+updateTextBox: (boxId, changes) =>
+  set((state) => {
+    if (!state.template) {
+      return state;
+    }
 
-      const boxes = state.template.boxes.map((box) => {
+    const box = state.template.boxes.find(
+      (box) => box.id === boxId
+    );
+
+    if (!box || box.type !== "text") {
+      return state;
+    }
+
+    const history = recordHistory(
+      state,
+      state.template
+    );
+
+    const boxes = state.template.boxes.map(
+      (box) => {
         if (box.id !== boxId) {
-          return box;
-        }
-
-        if (box.type !== "text") {
           return box;
         }
 
@@ -94,34 +113,48 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
           ...box,
           ...changes,
         };
-      });
+      }
+    );
 
-      return {
-        template: {
-          ...state.template,
-          boxes,
-          updatedAt: new Date().toISOString(),
-        },
-        isDirty: true,
-      };
-    }),
+    return {
+      template: {
+        ...state.template,
+        boxes,
+        updatedAt: new Date().toISOString(),
+      },
+
+      ...history,
+
+      isDirty: true,
+    };
+  }),
 
   // --------------------------------------------------
   // QR Box
   // --------------------------------------------------
 
-  updateQRBox: (boxId, changes) =>
-    set((state) => {
-      if (!state.template) {
-        return state;
-      }
+updateQRBox: (boxId, changes) =>
+  set((state) => {
+    if (!state.template) {
+      return state;
+    }
 
-      const boxes = state.template.boxes.map((box) => {
+    const box = state.template.boxes.find(
+      (box) => box.id === boxId
+    );
+
+    if (!box || box.type !== "qr") {
+      return state;
+    }
+
+    const history = recordHistory(
+      state,
+      state.template
+    );
+
+    const boxes = state.template.boxes.map(
+      (box) => {
         if (box.id !== boxId) {
-          return box;
-        }
-
-        if (box.type !== "qr") {
           return box;
         }
 
@@ -129,29 +162,47 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
           ...box,
           ...changes,
         };
-      });
+      }
+    );
 
-      return {
-        template: {
-          ...state.template,
-          boxes,
-          updatedAt: new Date().toISOString(),
-        },
-        isDirty: true,
-      };
-    }),
+    return {
+      template: {
+        ...state.template,
+        boxes,
+        updatedAt: new Date().toISOString(),
+      },
+
+      ...history,
+
+      isDirty: true,
+    };
+  }),
 
   // --------------------------------------------------
   // Generic Box Transform
   // --------------------------------------------------
 
-  updateBoxTransform: (boxId, changes) =>
-    set((state) => {
-      if (!state.template) {
-        return state;
-      }
+updateBoxTransform: (boxId, changes) =>
+  set((state) => {
+    if (!state.template) {
+      return state;
+    }
 
-      const boxes = state.template.boxes.map((box) => {
+    const boxExists = state.template.boxes.some(
+      (box) => box.id === boxId
+    );
+
+    if (!boxExists) {
+      return state;
+    }
+
+    const history = recordHistory(
+      state,
+      state.template
+    );
+
+    const boxes = state.template.boxes.map(
+      (box) => {
         if (box.id !== boxId) {
           return box;
         }
@@ -160,17 +211,21 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
           ...box,
           ...changes,
         };
-      });
+      }
+    );
 
-      return {
-        template: {
-          ...state.template,
-          boxes,
-          updatedAt: new Date().toISOString(),
-        },
-        isDirty: true,
-      };
-    }),
+    return {
+      template: {
+        ...state.template,
+        boxes,
+        updatedAt: new Date().toISOString(),
+      },
+
+      ...history,
+
+      isDirty: true,
+    };
+  }),
 
   // --------------------------------------------------
   // Zoom
@@ -195,32 +250,42 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   // Temporary Background
   // --------------------------------------------------
 
-  setTemporaryBackgroundImage: (imageUrl, dimensions) =>
-    set((state) => {
-      if (!state.template) {
-        return {
-          temporaryBackgroundImageUrl: imageUrl,
-          isDirty: true,
-        };
-      }
-
-      const updatedSettings = dimensions
-        ? {
-            ...state.template.settings,
-            canvasWidth: dimensions.width,
-            canvasHeight: dimensions.height,
-          }
-        : state.template.settings;
-
+setTemporaryBackgroundImage: (imageUrl, dimensions) =>
+  set((state) => {
+    if (!state.template) {
       return {
         temporaryBackgroundImageUrl: imageUrl,
-        template: {
-          ...state.template,
-          settings: updatedSettings,
-        },
         isDirty: true,
       };
-    }),
+    }
+
+    const history = recordHistory(
+      state,
+      state.template
+    );
+
+    const updatedSettings = dimensions
+      ? {
+          ...state.template.settings,
+          canvasWidth: dimensions.width,
+          canvasHeight: dimensions.height,
+        }
+      : state.template.settings;
+
+    return {
+      ...history,
+
+      temporaryBackgroundImageUrl: imageUrl,
+
+      template: {
+        ...state.template,
+        settings: updatedSettings,
+        updatedAt: new Date().toISOString(),
+      },
+
+      isDirty: true,
+    };
+  }),
 
   // --------------------------------------------------
   // Active Panel
@@ -375,7 +440,10 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         };
       }
 
+      const history = recordHistory(state, state.template);
+
       return {
+        ...history,
         template: {
           ...state.template,
           boxes: [...state.template.boxes, newBox],
