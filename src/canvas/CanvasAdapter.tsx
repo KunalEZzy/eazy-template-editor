@@ -38,7 +38,7 @@ export function pixelsToPercentage(
   return (pixels / totalPixels) * 100;
 }
 
-function applyTextTransform(
+export function applyTextTransform(
   text: string,
   transform: TextBox["textTransform"]
 ): string {
@@ -70,21 +70,17 @@ export function textBoxToFabric(
   const top = percentageToPixels(box.y, canvasSize.height);
   const boxWidth = percentageToPixels(box.width, canvasSize.width);
   const boxHeight = percentageToPixels(box.height, canvasSize.height);
-  const resolvedTextValue = resolveTextVariable(box.variable, previewData);
+  const resolvedTextValue = resolveTextVariable(box.variable, previewData, box.text);
   const textValue = applyTextTransform(resolvedTextValue, box.textTransform);
 
   const fitResult = calculateTextFit({
     text: textValue,
-
     width: boxWidth,
     height: boxHeight,
-
     fontFamily: box.fontFamily,
     fontWeight: box.fontWeight,
-
     fontSize: box.fontSize,
     lineHeight: box.lineHeight,
-
     letterSpacing: box.letterSpacing,
   });
 
@@ -106,12 +102,15 @@ export function textBoxToFabric(
     opacity: box.opacity,
     textAlign: box.textAlign,
     selectable: !box.locked,
+    editable: !box.locked,
     visible: box.visible,
     originX: "left",
     originY: "top",
     splitByGrapheme: false,
     data: customData,
   });
+
+  (text as unknown as { data: FabricCustomData }).data = customData;
 
   text.set({
     width: boxWidth,
@@ -156,6 +155,8 @@ export async function qrBoxToFabric(
     variable: box.variable,
     logoUrl: box.logoUrl,
   };
+
+  (image as unknown as { data: FabricCustomData }).data = customData;
 
   image.set({
     left,

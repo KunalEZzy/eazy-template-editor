@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useRef,
   type ChangeEvent,
 } from "react";
@@ -16,18 +15,6 @@ export function BackgroundSection() {
   const setTemporaryBackgroundImage = useEditorStore(
     (state) => state.setTemporaryBackgroundImage
   );
-
-  /*
-   * Release the previous object URL when the
-   * temporary background changes or the component unmounts.
-   */
-  useEffect(() => {
-    return () => {
-      if (temporaryBackgroundImageUrl) {
-        URL.revokeObjectURL(temporaryBackgroundImageUrl);
-      }
-    };
-  }, [temporaryBackgroundImageUrl]);
 
   if (!template) {
     return null;
@@ -60,24 +47,32 @@ export function BackgroundSection() {
       return;
     }
 
-    const objectUrl = URL.createObjectURL(file);
-    const img = new window.Image();
+    const reader = new FileReader();
 
-    img.onload = () => {
-      const width = img.naturalWidth;
-      const height = img.naturalHeight;
-      if (width > 0 && height > 0) {
-        setTemporaryBackgroundImage(objectUrl, { width, height });
-      } else {
-        setTemporaryBackgroundImage(objectUrl);
-      }
+    reader.onload = (loadEvent) => {
+      const dataUrl = loadEvent.target?.result as string;
+      if (!dataUrl) return;
+
+      const img = new window.Image();
+
+      img.onload = () => {
+        const width = img.naturalWidth;
+        const height = img.naturalHeight;
+        if (width > 0 && height > 0) {
+          setTemporaryBackgroundImage(dataUrl, { width, height });
+        } else {
+          setTemporaryBackgroundImage(dataUrl);
+        }
+      };
+
+      img.onerror = () => {
+        setTemporaryBackgroundImage(dataUrl);
+      };
+
+      img.src = dataUrl;
     };
 
-    img.onerror = () => {
-      setTemporaryBackgroundImage(objectUrl);
-    };
-
-    img.src = objectUrl;
+    reader.readAsDataURL(file);
 
     /*
      * Allows the user to select the same file again.

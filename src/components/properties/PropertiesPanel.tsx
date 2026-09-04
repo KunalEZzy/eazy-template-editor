@@ -5,25 +5,11 @@ import { BackgroundSection } from "./BackgroundSection";
 import { QRPropertiesSection } from "./QRPropertiesSection";
 
 export function PropertiesPanel() {
-  const template = useEditorStore(
-    (state) => state.template
-  );
-
-  const selectedBoxId = useEditorStore(
-    (state) => state.selectedBoxId
-  );
-
-  const updateBoxTransform = useEditorStore(
-    (state) => state.updateBoxTransform
-  );
-
-  const updateTextBox = useEditorStore(
-    (state) => state.updateTextBox
-  );
-
-  const updateQRBox = useEditorStore(
-    (state) => state.updateQRBox
-  );
+  const template = useEditorStore((state) => state.template);
+  const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
+  const updateBoxTransform = useEditorStore((state) => state.updateBoxTransform);
+  const updateTextBox = useEditorStore((state) => state.updateTextBox);
+  const updateQRBox = useEditorStore((state) => state.updateQRBox);
 
   // Return a clean placeholder if no template or selection is active
   if (!template || !selectedBoxId) {
@@ -31,9 +17,8 @@ export function PropertiesPanel() {
       <div
         className="properties-panel"
         style={{
-          width: "280px",
-          padding: "16px",
-          borderLeft: "1px solid var(--border)",
+          width: "100%",
+          padding: "20px 16px",
           boxSizing: "border-box",
           height: "100%",
           display: "flex",
@@ -41,32 +26,29 @@ export function PropertiesPanel() {
           justifyContent: "center",
           alignItems: "center",
           color: "var(--text)",
-          textAlign: "center"
+          textAlign: "center",
         }}
       >
-        <div style={{ fontSize: "24px", marginBottom: "8px" }}>🎛️</div>
+        <div style={{ fontSize: "28px", marginBottom: "8px" }}>🎛️</div>
         <h2 style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 4px", color: "var(--text-h)" }}>
           No Selection
         </h2>
-        <p style={{ fontSize: "12px", margin: 0, color: "var(--text)", maxWidth: "180px" }}>
-          Select any template layer to inspect and edit properties.
+        <p style={{ fontSize: "12px", margin: 0, color: "var(--text)", maxWidth: "200px" }}>
+          Select any template element or layer to inspect and edit its properties.
         </p>
       </div>
     );
   }
 
-  const box = template.boxes.find(
-    (item) => item.id === selectedBoxId
-  );
+  const box = template.boxes.find((item) => item.id === selectedBoxId);
 
   if (!box) {
     return (
       <div
         className="properties-panel"
         style={{
-          width: "280px",
-          padding: "16px",
-          borderLeft: "1px solid var(--border)",
+          width: "100%",
+          padding: "20px 16px",
           boxSizing: "border-box",
           height: "100%",
           display: "flex",
@@ -74,9 +56,10 @@ export function PropertiesPanel() {
           justifyContent: "center",
           alignItems: "center",
           color: "var(--text)",
+          textAlign: "center",
         }}
       >
-        <div style={{ fontSize: "24px", marginBottom: "8px" }}>⚠️</div>
+        <div style={{ fontSize: "28px", marginBottom: "8px" }}>⚠️</div>
         <h2 style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 4px", color: "var(--text-h)" }}>
           Not Found
         </h2>
@@ -91,15 +74,12 @@ export function PropertiesPanel() {
     <div
       className="properties-panel"
       style={{
-        width: "280px",
+        width: "100%",
         padding: "16px",
-        borderLeft: "1px solid var(--border)",
         boxSizing: "border-box",
-        height: "100%",
         display: "flex",
         flexDirection: "column",
         gap: "14px",
-        overflowY: "auto"
       }}
     >
       {/* Inject custom styling rules for our inputs */}
@@ -170,7 +150,7 @@ export function PropertiesPanel() {
         {"variable" in box && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text)" }}>VARIABLE</span>
-            <code style={{ fontSize: "10px", padding: "2px 4px" }}>
+            <code style={{ fontSize: "10px", padding: "2px 4px", background: "rgba(124, 58, 237, 0.08)", borderRadius: "4px" }}>
               {box.variable}
             </code>
           </div>
@@ -183,32 +163,20 @@ export function PropertiesPanel() {
       <GeometrySection box={box} updateBoxTransform={updateBoxTransform} />
 
       {/* Typography Section — only for text boxes */}
-      {"fontFamily" in box && (
+      {box.type === "text" && (
         <>
           <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: 0 }} />
           <TypographySection box={box} updateTextBox={updateTextBox} />
         </>
       )}
 
+      {/* QR Properties Section — only for QR boxes */}
       {box.type === "qr" && (
-      <>
-        <hr
-          style={{
-            border: "none",
-            borderTop:
-              "1px solid var(--border)",
-            margin: 0,
-          }}
-        />
-
-        <QRPropertiesSection
-          box={box}
-          updateQRBox={
-            updateQRBox
-          }
-        />
-      </>
-    )}
+        <>
+          <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: 0 }} />
+          <QRPropertiesSection box={box} updateQRBox={updateQRBox} />
+        </>
+      )}
 
       {/* Background Section */}
       <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: 0 }} />

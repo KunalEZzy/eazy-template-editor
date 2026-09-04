@@ -25,6 +25,7 @@ export interface TextBox extends BaseBox {
   type: "text";
 
   variable: TextVariable;
+  text?: string;
 
   fontFamily: string;
   fontSize: number;

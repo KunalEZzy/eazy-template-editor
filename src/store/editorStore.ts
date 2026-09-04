@@ -9,6 +9,7 @@ import { findAvailableBoxPlacement } from "../editor/placement/boxPlacement";
 import type { Template } from "../domain/template/template.types";
 
 const MAX_HISTORY = 50;
+
 const cloneTemplate = (template: Template): Template => {
   return structuredClone(template);
 };
@@ -52,24 +53,17 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   // Template
   // --------------------------------------------------
 
-setTemplate: (template) =>
-  set((state) => ({
-    template,
-    templateLoadVersion:
-      state.templateLoadVersion + 1,
-
-    temporaryBackgroundImageUrl: null,
-
-    selectedBoxId: null,
-
-    isDirty: false,
-
-    error: null,
-
-    past: [],
-
-    future: [],
-  })),
+  setTemplate: (template) =>
+    set((state) => ({
+      template,
+      templateLoadVersion: state.templateLoadVersion + 1,
+      temporaryBackgroundImageUrl: null,
+      selectedBoxId: null,
+      isDirty: false,
+      error: null,
+      past: [],
+      future: [],
+    })),
 
   // --------------------------------------------------
   // Selection
@@ -84,275 +78,205 @@ setTemplate: (template) =>
   // Text Box
   // --------------------------------------------------
 
-updateTextBox: (boxId, changes) =>
-  set((state) => {
-    if (!state.template) {
-      return state;
-    }
+  updateTextBox: (boxId, changes) =>
+    set((state) => {
+      if (!state.template) {
+        return state;
+      }
 
-    const box = state.template.boxes.find(
-      (box) => box.id === boxId
-    );
+      const box = state.template.boxes.find((b) => b.id === boxId);
+      if (!box || box.type !== "text") {
+        return state;
+      }
 
-    if (!box || box.type !== "text") {
-      return state;
-    }
+      // Check if changes are color-only
+      const keys = Object.keys(changes);
+      const isColorOnly =
+        keys.length > 0 &&
+        keys.every((key) => key === "color" || key === "color2");
 
-    const history = recordHistory(
-      state,
-      state.template
-    );
+      // Record history only for non-color edits (e.g. text content, font, size, align)
+      const history = isColorOnly ? {} : recordHistory(state, state.template);
 
-    const boxes = state.template.boxes.map(
-      (box) => {
-        if (box.id !== boxId) {
-          return box;
-        }
-
-        if (box.type !== "text") {
-          return box;
+      const boxes = state.template.boxes.map((b) => {
+        if (b.id !== boxId || b.type !== "text") {
+          return b;
         }
 
         return {
-          ...box,
+          ...b,
           ...changes,
         };
-      }
-    );
+      });
 
-    return {
-      template: {
-        ...state.template,
-        boxes,
-        updatedAt: new Date().toISOString(),
-      },
-
-      ...history,
-
-      isDirty: true,
-    };
-  }),
+      return {
+        ...history,
+        template: {
+          ...state.template,
+          boxes,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    }),
 
   // --------------------------------------------------
   // QR Box
   // --------------------------------------------------
 
-updateQRBox: (boxId, changes) =>
-  set((state) => {
-    if (!state.template) {
-      return state;
-    }
+  updateQRBox: (boxId, changes) =>
+    set((state) => {
+      if (!state.template) {
+        return state;
+      }
 
-    const box = state.template.boxes.find(
-      (box) => box.id === boxId
-    );
+      const box = state.template.boxes.find((b) => b.id === boxId);
+      if (!box || box.type !== "qr") {
+        return state;
+      }
 
-    if (!box || box.type !== "qr") {
-      return state;
-    }
+      // Check if changes are color-only
+      const keys = Object.keys(changes);
+      const isColorOnly =
+        keys.length > 0 &&
+        keys.every(
+          (key) => key === "foregroundColor" || key === "backgroundColor"
+        );
 
-    const history = recordHistory(
-      state,
-      state.template
-    );
+      // Record history only for non-color edits (e.g. variable, logoUrl)
+      const history = isColorOnly ? {} : recordHistory(state, state.template);
 
-    const boxes = state.template.boxes.map(
-      (box) => {
-        if (box.id !== boxId) {
-          return box;
-        }
-
-        if (box.type !== "qr") {
-          return box;
+      const boxes = state.template.boxes.map((b) => {
+        if (b.id !== boxId || b.type !== "qr") {
+          return b;
         }
 
         return {
-          ...box,
+          ...b,
           ...changes,
         };
-      }
-    );
+      });
 
-    return {
-      template: {
-        ...state.template,
-        boxes,
-        updatedAt: new Date().toISOString(),
-      },
-
-      ...history,
-
-      isDirty: true,
-    };
-  }),
-
-  // --------------------------------------------------
-  // Generic Box Transform
-  // --------------------------------------------------
-
-updateBoxTransform: (boxId, changes) =>
-  set((state) => {
-    if (!state.template) {
-      return state;
-    }
-
-    const boxExists = state.template.boxes.some(
-      (box) => box.id === boxId
-    );
-
-    if (!boxExists) {
-      return state;
-    }
-
-    const history = recordHistory(
-      state,
-      state.template
-    );
-
-    const boxes = state.template.boxes.map(
-      (box) => {
-        if (box.id !== boxId) {
-          return box;
-        }
-
-        return {
-          ...box,
-          ...changes,
-        };
-      }
-    );
-
-    return {
-      template: {
-        ...state.template,
-        boxes,
-        updatedAt: new Date().toISOString(),
-      },
-
-      ...history,
-
-      isDirty: true,
-    };
-  }),
-
-  // --------------------------------------------------
-  // Zoom
-  // --------------------------------------------------
-
-  setZoom: (zoom) =>
-    set({
-      zoom,
-    }),
-
-  // --------------------------------------------------
-  // Pan
-  // --------------------------------------------------
-
-  setPan: (panX, panY) =>
-    set({
-      panX,
-      panY,
-    }),
-
-  // --------------------------------------------------
-  // Temporary Background
-  // --------------------------------------------------
-
-setTemporaryBackgroundImage: (imageUrl, dimensions) =>
-  set((state) => {
-    if (!state.template) {
       return {
-        temporaryBackgroundImageUrl: imageUrl,
+        ...history,
+        template: {
+          ...state.template,
+          boxes,
+          updatedAt: new Date().toISOString(),
+        },
         isDirty: true,
       };
-    }
+    }),
 
-    const history = recordHistory(
-      state,
-      state.template
-    );
+  // --------------------------------------------------
+  // Generic Box Transform (Move / Resize / Rotate)
+  // --------------------------------------------------
 
-    const updatedSettings = dimensions
-      ? {
-          ...state.template.settings,
-          canvasWidth: dimensions.width,
-          canvasHeight: dimensions.height,
+  updateBoxTransform: (boxId, changes) =>
+    set((state) => {
+      if (!state.template) {
+        return state;
+      }
+
+      const boxExists = state.template.boxes.some((b) => b.id === boxId);
+      if (!boxExists) {
+        return state;
+      }
+
+      const history = recordHistory(state, state.template);
+
+      const boxes = state.template.boxes.map((b) => {
+        if (b.id !== boxId) {
+          return b;
         }
-      : state.template.settings;
 
-    return {
-      ...history,
+        return {
+          ...b,
+          ...changes,
+        };
+      });
 
-      temporaryBackgroundImageUrl: imageUrl,
+      return {
+        ...history,
+        template: {
+          ...state.template,
+          boxes,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    }),
 
-      template: {
-        ...state.template,
-        settings: updatedSettings,
-        updatedAt: new Date().toISOString(),
-      },
+  // --------------------------------------------------
+  // Zoom & Pan
+  // --------------------------------------------------
 
-      isDirty: true,
-    };
-  }),
+  setZoom: (zoom) => set({ zoom }),
+
+  setPan: (panX, panY) => set({ panX, panY }),
+
+  // --------------------------------------------------
+  // Temporary & Custom Background
+  // --------------------------------------------------
+
+  setTemporaryBackgroundImage: (imageUrl, dimensions) =>
+    set((state) => {
+      if (!state.template) {
+        return {
+          temporaryBackgroundImageUrl: imageUrl,
+          isDirty: true,
+        };
+      }
+
+      const updatedSettings = dimensions
+        ? {
+            ...state.template.settings,
+            canvasWidth: dimensions.width,
+            canvasHeight: dimensions.height,
+          }
+        : state.template.settings;
+
+      return {
+        // Reset history so template/background change establishes a brand new history baseline
+        past: [],
+        future: [],
+        temporaryBackgroundImageUrl: imageUrl,
+        template: {
+          ...state.template,
+          background: {
+            ...state.template.background,
+            imageUrl: imageUrl ?? state.template.background.imageUrl,
+          },
+          settings: updatedSettings,
+          updatedAt: new Date().toISOString(),
+        },
+        templateLoadVersion: state.templateLoadVersion + 1,
+        selectedBoxId: null,
+        isDirty: true,
+      };
+    }),
 
   // --------------------------------------------------
   // Active Panel
   // --------------------------------------------------
 
-  setActivePanel: (activePanel) =>
-    set({
-      activePanel,
-    }),
+  setActivePanel: (activePanel) => set({ activePanel }),
 
   // --------------------------------------------------
-  // Dirty State
+  // Dirty & Status Flags
   // --------------------------------------------------
 
-  markDirty: () =>
-    set({
-      isDirty: true,
-    }),
+  markDirty: () => set({ isDirty: true }),
 
-  markClean: () =>
-    set({
-      isDirty: false,
-    }),
+  markClean: () => set({ isDirty: false }),
 
-  // --------------------------------------------------
-  // Loading
-  // --------------------------------------------------
+  setLoading: (isLoading) => set({ isLoading }),
 
-  setLoading: (isLoading) =>
-    set({
-      isLoading,
-    }),
+  setSaving: (isSaving) => set({ isSaving }),
 
-  // --------------------------------------------------
-  // Saving
-  // --------------------------------------------------
+  setError: (error) => set({ error }),
 
-  setSaving: (isSaving) =>
-    set({
-      isSaving,
-    }),
-
-  // --------------------------------------------------
-  // Error
-  // --------------------------------------------------
-
-  setError: (error) =>
-    set({
-      error,
-    }),
-
-  // --------------------------------------------------
-  // Reset
-  // --------------------------------------------------
-
-  resetEditor: () =>
-    set({
-      ...initialState,
-    }),
+  resetEditor: () => set({ ...initialState }),
 
   // --------------------------------------------------
   // Add Variable
@@ -365,15 +289,13 @@ setTemporaryBackgroundImage: (imageUrl, dimensions) =>
       }
 
       const variableDefinition = VARIABLE_DEFINITIONS.find(
-        (definition) => definition.key === variable
+        (def) => def.key === variable
       );
-
       if (!variableDefinition) {
         return state;
       }
 
       const variableDefaults = VARIABLE_DEFAULTS[variable];
-
       if (!variableDefaults) {
         return state;
       }
@@ -382,7 +304,7 @@ setTemporaryBackgroundImage: (imageUrl, dimensions) =>
       const existingBoxes = state.template.boxes;
 
       const highestZIndex = existingBoxes.reduce(
-        (max, box) => Math.max(max, box.zIndex),
+        (max, b) => Math.max(max, b.zIndex),
         0
       );
 
@@ -472,21 +394,21 @@ setTemporaryBackgroundImage: (imageUrl, dimensions) =>
         return state;
       }
 
-      const boxExists = state.template.boxes.some((box) => box.id === boxId);
+      const boxExists = state.template.boxes.some((b) => b.id === boxId);
       if (!boxExists) {
         return state;
       }
 
       const history = recordHistory(state, state.template);
-      const boxes = state.template.boxes.filter((box) => box.id !== boxId);
+      const boxes = state.template.boxes.filter((b) => b.id !== boxId);
 
       return {
+        ...history,
         template: {
           ...state.template,
           boxes,
           updatedAt: new Date().toISOString(),
         },
-        ...history,
         selectedBoxId:
           state.selectedBoxId === boxId ? null : state.selectedBoxId,
         isDirty: true,
@@ -511,6 +433,7 @@ setTemporaryBackgroundImage: (imageUrl, dimensions) =>
         future: [...state.future, cloneTemplate(state.template)],
         template: cloneTemplate(previousTemplate),
         templateLoadVersion: state.templateLoadVersion + 1,
+        temporaryBackgroundImageUrl: previousTemplate.background.imageUrl,
         selectedBoxId: null,
         isDirty: true,
       };
@@ -534,6 +457,7 @@ setTemporaryBackgroundImage: (imageUrl, dimensions) =>
         future: remainingFuture,
         template: cloneTemplate(nextTemplate),
         templateLoadVersion: state.templateLoadVersion + 1,
+        temporaryBackgroundImageUrl: nextTemplate.background.imageUrl,
         selectedBoxId: null,
         isDirty: true,
       };
