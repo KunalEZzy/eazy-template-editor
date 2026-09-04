@@ -91,6 +91,8 @@ export function PropertiesPanel() {
           border-radius: 6px;
           background: #f9fafb;
           color: #111827;
+          background: var(--input-bg);
+          color: var(--input-text);
           font-size: 12px;
           font-weight: 500;
           box-sizing: border-box;
@@ -101,6 +103,10 @@ export function PropertiesPanel() {
         .theme-dark .prop-input {
           background: #242424;
           color: #ffffff;
+        }
+        .theme-light .prop-input {
+          background: #f9fafb;
+          color: #111827;
         }
         .prop-input:focus {
           border-color: #7c3aed;
