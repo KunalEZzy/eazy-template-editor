@@ -109,6 +109,10 @@ updateTextBox: (boxId, changes) =>
           return box;
         }
 
+        if (box.type !== "text") {
+          return box;
+        }
+
         return {
           ...box,
           ...changes,
@@ -155,6 +159,10 @@ updateQRBox: (boxId, changes) =>
     const boxes = state.template.boxes.map(
       (box) => {
         if (box.id !== boxId) {
+          return box;
+        }
+
+        if (box.type !== "qr") {
           return box;
         }
 

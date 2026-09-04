@@ -5,7 +5,7 @@ interface RightSidebarProps {
   tokens: DesignTokens;
 }
 
-const SIDEBAR_WIDTH = 280;
+const SIDEBAR_WIDTH = 290;
 
 export function RightSidebar({
   tokens,

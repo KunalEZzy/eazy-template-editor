@@ -5,13 +5,10 @@ import {
   Textbox,
   type FabricObject,
 } from "fabric";
-
 import type { Template } from "../domain/template/template.types";
 import type { PreviewData } from "../domain/variables/preview.types";
 import { resolveTextVariable } from "../domain/variables/previewResolver";
-
 import { useEditorStore } from "../store/editorStore";
-
 import {
   percentageToPixels,
   pixelsToPercentage,
@@ -19,6 +16,7 @@ import {
   qrBoxToFabric,
   type FabricCustomData,
 } from "./CanvasAdapter";
+import { applyTextTransform, calculateTextFit } from "./TextFit";
 
 interface CanvasEditorProps {
   template: Template;
@@ -453,32 +451,91 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
         continue;
       }
 
-      if (box.type === "text") {
-        const newLeft = percentageToPixels(box.x, documentWidth);
-        const newTop = percentageToPixels(box.y, documentHeight);
-        const newWidth = percentageToPixels(box.width, documentWidth);
-        const textValue = resolveTextVariable(box.variable, previewDataRef.current);
+if (box.type === "text") {
+  const newLeft = percentageToPixels(
+    box.x,
+    documentWidth
+  );
 
-        fObj.set({
-          left: newLeft,
-          top: newTop,
-          width: newWidth,
-          angle: box.rotation,
-          opacity: box.opacity,
-          visible: box.visible,
-          selectable: !box.locked,
-          fontSize: box.fontSize,
-          fontFamily: box.fontFamily,
-          fontWeight: box.fontWeight,
-          fill: box.color,
-          textAlign: box.textAlign,
-          scaleX: 1,
-          scaleY: 1,
-          text: textValue,
-        });
-        fObj.setCoords();
-        needsRender = true;
-      }
+  const newTop = percentageToPixels(
+    box.y,
+    documentHeight
+  );
+
+  const newWidth = percentageToPixels(
+    box.width,
+    documentWidth
+  );
+
+  const newHeight = percentageToPixels(
+    box.height,
+    documentHeight
+  );
+
+  const resolvedTextValue =
+    resolveTextVariable(
+      box.variable,
+      previewDataRef.current
+    );
+
+  const textValue =
+    applyTextTransform(
+      resolvedTextValue,
+      box.textTransform
+    );
+
+  const fitResult =
+    calculateTextFit({
+      text: textValue,
+
+      width: newWidth,
+      height: newHeight,
+
+      fontFamily: box.fontFamily,
+      fontWeight: box.fontWeight,
+
+      fontSize: box.fontSize,
+      lineHeight: box.lineHeight,
+
+      letterSpacing:
+        box.letterSpacing,
+    });
+
+  fObj.set({
+    left: newLeft,
+    top: newTop,
+
+    width: newWidth,
+
+    angle: box.rotation,
+    opacity: box.opacity,
+
+    visible: box.visible,
+    selectable: !box.locked,
+
+    fontSize: fitResult.fontSize,
+    fontFamily: box.fontFamily,
+    fontWeight: box.fontWeight,
+
+    fill: box.color,
+
+    textAlign: box.textAlign,
+
+    lineHeight: box.lineHeight,
+
+    charSpacing:
+      box.letterSpacing,
+
+    scaleX: 1,
+    scaleY: 1,
+
+    text: textValue,
+  });
+
+  fObj.setCoords();
+
+  needsRender = true;
+}
 
       if (box.type === "qr") {
         const qrWidth = percentageToPixels(
