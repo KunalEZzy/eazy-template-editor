@@ -1,16 +1,13 @@
 import type { TextBox } from "../../domain/box/box.types";
-import {
-  PropertyInput,
-  PropertyTextInput,
-} from "./PropertyInput";
+import { PropertyInput, PropertyTextInput } from "./PropertyInput";
+import { resolveTextVariable } from "../../domain/variables/previewResolver";
+import { mockPreviewData } from "../../domain/variables/preview.mock";
 
 interface TypographySectionProps {
   box: TextBox;
   updateTextBox: (
     boxId: string,
-    changes: Partial<
-      Omit<TextBox, "id" | "type">
-    >
+    changes: Partial<Omit<TextBox, "id" | "type">>
   ) => void;
 }
 
@@ -24,13 +21,15 @@ export function TypographySection({
   box,
   updateTextBox,
 }: TypographySectionProps) {
+  const currentText = resolveTextVariable(box.variable, mockPreviewData, box.text);
+
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
       <h3
         style={{
           fontSize: "11px",
           fontWeight: 700,
-          margin: "0 0 8px",
+          margin: 0,
           color: "var(--text-h)",
           textTransform: "uppercase",
           letterSpacing: "0.5px",
@@ -39,294 +38,223 @@ export function TypographySection({
         Typography
       </h3>
 
-      {/* Font Family */}
-      <div style={{ marginBottom: "8px" }}>
-        <div
+      {/* Text Content Input */}
+      <div>
+        <span
           style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "4px",
+            display: "block",
+            fontSize: "9px",
+            fontWeight: 700,
+            color: "var(--text)",
+            marginBottom: "4px",
+            textAlign: "left",
           }}
         >
+          TEXT CONTENT
+        </span>
+
+        <textarea
+          className="prop-input"
+          value={currentText}
+          rows={2}
+          onChange={(e) =>
+            updateTextBox(box.id, {
+              text: e.target.value,
+            })
+          }
+          placeholder="Enter text..."
+          style={{
+            textAlign: "left",
+            resize: "vertical",
+            fontFamily: "inherit",
+            lineHeight: 1.3,
+            padding: "6px 8px",
+          }}
+        />
+      </div>
+
+      {/* Font Family */}
+      <div>
+        <span
+          style={{
+            display: "block",
+            fontSize: "9px",
+            fontWeight: 700,
+            color: "var(--text)",
+            marginBottom: "4px",
+            textAlign: "left",
+          }}
+        >
+          FONT FAMILY
+        </span>
+
+        <select
+          className="prop-input prop-select"
+          value={box.fontFamily}
+          onChange={(e) =>
+            updateTextBox(box.id, {
+              fontFamily: e.target.value,
+            })
+          }
+        >
+          <option value="Arial">Arial</option>
+          <option value="Helvetica">Helvetica</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Georgia">Georgia</option>
+          <option value="Verdana">Verdana</option>
+          <option value="Impact">Impact</option>
+          <option value="Trebuchet MS">Trebuchet MS</option>
+        </select>
+      </div>
+
+      {/* Size & Weight */}
+      <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ flex: 1 }}>
           <span
             style={{
+              display: "block",
               fontSize: "9px",
               fontWeight: 700,
               color: "var(--text)",
+              marginBottom: "4px",
               textAlign: "left",
             }}
           >
-            FONT FAMILY
+            SIZE (PX)
+          </span>
+
+          <PropertyInput
+            value={box.fontSize}
+            step="1"
+            min={1}
+            onChange={(val) =>
+              updateTextBox(box.id, {
+                fontSize: val,
+              })
+            }
+          />
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <span
+            style={{
+              display: "block",
+              fontSize: "9px",
+              fontWeight: 700,
+              color: "var(--text)",
+              marginBottom: "4px",
+              textAlign: "left",
+            }}
+          >
+            WEIGHT
           </span>
 
           <select
             className="prop-input prop-select"
-            value={box.fontFamily}
+            value={box.fontWeight}
             onChange={(e) =>
               updateTextBox(box.id, {
-                fontFamily: e.target.value,
+                fontWeight: Number(e.target.value),
               })
             }
           >
-            <option value="Arial">
-              Arial
-            </option>
-
-            <option value="Helvetica">
-              Helvetica
-            </option>
-
-            <option value="Times New Roman">
-              Times New Roman
-            </option>
-
-            <option value="Courier New">
-              Courier New
-            </option>
-
-            <option value="Georgia">
-              Georgia
-            </option>
-
-            <option value="Verdana">
-              Verdana
-            </option>
+            <option value={300}>Light (300)</option>
+            <option value={400}>Normal (400)</option>
+            <option value={500}>Medium (500)</option>
+            <option value={600}>Semi-Bold (600)</option>
+            <option value={700}>Bold (700)</option>
+            <option value={900}>Black (900)</option>
           </select>
         </div>
       </div>
 
-      {/* Size & Weight */}
-      <div
-        style={{
-          display: "flex",
-          gap: "8px",
-          marginBottom: "8px",
-        }}
-      >
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "9px",
-                fontWeight: 700,
-                color: "var(--text)",
-                textAlign: "left",
-              }}
-            >
-              SIZE (PX)
-            </span>
-
-            <PropertyInput
-              value={box.fontSize}
-              step="1"
-              min={1}
-              onChange={(val) =>
-                updateTextBox(
-                  box.id,
-                  {
-                    fontSize: val,
-                  }
-                )
-              }
-            />
-          </div>
-        </div>
-
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "9px",
-                fontWeight: 700,
-                color: "var(--text)",
-                textAlign: "left",
-              }}
-            >
-              WEIGHT
-            </span>
-
-            <select
-              className="prop-input prop-select"
-              value={box.fontWeight}
-              onChange={(e) =>
-                updateTextBox(box.id, {
-                  fontWeight:
-                    Number(
-                      e.target.value
-                    ),
-                })
-              }
-            >
-              <option value={300}>
-                Light (300)
-              </option>
-
-              <option value={400}>
-                Normal (400)
-              </option>
-
-              <option value={500}>
-                Medium (500)
-              </option>
-
-              <option value={700}>
-                Bold (700)
-              </option>
-
-              <option value={900}>
-                Black (900)
-              </option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       {/* Color & Alignment */}
-      <div
-        style={{
-          display: "flex",
-          gap: "8px",
-        }}
-      >
+      <div style={{ display: "flex", gap: "8px" }}>
         {/* Color */}
         <div style={{ flex: 1 }}>
-          <div
+          <span
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
+              display: "block",
+              fontSize: "9px",
+              fontWeight: 700,
+              color: "var(--text)",
+              marginBottom: "4px",
+              textAlign: "left",
             }}
           >
-            <span
-              style={{
-                fontSize: "9px",
-                fontWeight: 700,
-                color: "var(--text)",
-                textAlign: "left",
-              }}
-            >
-              COLOR
-            </span>
+            COLOR
+          </span>
 
-            <div
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <input
+              type="color"
+              value={box.color}
+              onChange={(e) =>
+                updateTextBox(box.id, {
+                  color: e.target.value,
+                })
+              }
               style={{
-                display: "flex",
-                gap: "4px",
+                width: "28px",
+                height: "28px",
+                padding: 0,
+                border: "1px solid var(--border)",
+                borderRadius: "6px",
+                cursor: "pointer",
+                background: "transparent",
+                flexShrink: 0,
               }}
-            >
-              <input
-                type="color"
-                value={box.color}
-                onChange={(e) =>
-                  updateTextBox(
-                    box.id,
-                    {
-                      color:
-                        e.target.value,
-                    }
-                  )
-                }
-                style={{
-                  width: "24px",
-                  height: "28px",
-                  padding: 0,
-                  border:
-                    "1px solid var(--border)",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  background:
-                    "transparent",
-                }}
-              />
+            />
 
-              <PropertyTextInput
-                value={box.color}
-                onChange={(val) =>
-                  updateTextBox(
-                    box.id,
-                    {
-                      color: val,
-                    }
-                  )
-                }
-                style={{
-                  flex: 1,
-                  textTransform:
-                    "uppercase",
-                  textAlign: "center",
-                }}
-              />
-            </div>
+            <PropertyTextInput
+              value={box.color}
+              onChange={(val) =>
+                updateTextBox(box.id, {
+                  color: val,
+                })
+              }
+              style={{
+                flex: 1,
+                textTransform: "uppercase",
+                textAlign: "center",
+                fontSize: "11px",
+              }}
+            />
           </div>
         </div>
 
         {/* Alignment */}
         <div style={{ flex: 1 }}>
-          <div
+          <span
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
+              display: "block",
+              fontSize: "9px",
+              fontWeight: 700,
+              color: "var(--text)",
+              marginBottom: "4px",
+              textAlign: "left",
             }}
           >
-            <span
-              style={{
-                fontSize: "9px",
-                fontWeight: 700,
-                color: "var(--text)",
-                textAlign: "left",
-              }}
-            >
-              ALIGN
-            </span>
+            ALIGN
+          </span>
 
-            <select
-              className="prop-input prop-select"
-              value={box.textAlign}
-              onChange={(e) => {
-                const value =
-                  e.target.value;
-
-                if (
-                  TEXT_ALIGN_OPTIONS.includes(
-                    value as TextBox["textAlign"]
-                  )
-                ) {
-                  updateTextBox(
-                    box.id,
-                    {
-                      textAlign:
-                        value as TextBox["textAlign"],
-                    }
-                  );
-                }
-              }}
-            >
-              <option value="left">
-                Left
-              </option>
-
-              <option value="center">
-                Center
-              </option>
-
-              <option value="right">
-                Right
-              </option>
-            </select>
-          </div>
+          <select
+            className="prop-input prop-select"
+            value={box.textAlign}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (TEXT_ALIGN_OPTIONS.includes(value as TextBox["textAlign"])) {
+                updateTextBox(box.id, {
+                  textAlign: value as TextBox["textAlign"],
+                });
+              }
+            }}
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+          </select>
         </div>
       </div>
     </div>

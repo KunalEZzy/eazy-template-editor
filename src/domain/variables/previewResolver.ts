@@ -7,14 +7,18 @@ import type { PreviewData } from "./preview.types";
 
 export function resolveTextVariable(
   variable: TextVariable,
-  previewData: PreviewData
+  previewData: PreviewData,
+  customText?: string
 ): string {
-  return previewData[variable];
+  if (customText !== undefined && customText !== null) {
+    return customText;
+  }
+  return previewData[variable] ?? "";
 }
 
 export function resolveQRVariable(
   variable: QRVariable,
   previewData: PreviewData
 ): string {
-  return previewData[variable];
+  return previewData[variable] ?? "";
 }

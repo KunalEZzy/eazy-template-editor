@@ -208,7 +208,11 @@ export function EditorLayout() {
         display: "flex",
         flexDirection: "column",
         height: "100vh",
-        width: "100%",
+        width: "100vw",
+        maxHeight: "100vh",
+        maxWidth: "100vw",
+        position: "fixed",
+        inset: 0,
         overflow: "hidden",
         boxSizing: "border-box",
         fontFamily:
