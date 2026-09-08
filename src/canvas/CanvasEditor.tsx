@@ -40,6 +40,44 @@ function getObjectCustomData(obj: FabricObject): FabricCustomData | undefined {
   );
 }
 
+function patchHiddenTextarea(textarea?: HTMLTextAreaElement | null) {
+  if (!textarea) return;
+  textarea.style.position = "fixed";
+  textarea.style.top = "0px";
+  textarea.style.left = "0px";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  textarea.style.zIndex = "-9999";
+  textarea.style.transform = "none";
+
+  const customTextarea = textarea as unknown as { __preventScrollPatched?: boolean };
+  if (!customTextarea.__preventScrollPatched) {
+    customTextarea.__preventScrollPatched = true;
+    const originalFocus = textarea.focus.bind(textarea);
+    textarea.focus = (options?: FocusOptions) => {
+      originalFocus({ preventScroll: true, ...options });
+    };
+  }
+}
+
+function resetAllScrolls() {
+  if (typeof window !== "undefined") {
+    if (window.scrollX !== 0 || window.scrollY !== 0) {
+      window.scrollTo(0, 0);
+    }
+    if (document.documentElement.scrollTop !== 0) {
+      document.documentElement.scrollTop = 0;
+    }
+    if (document.body.scrollTop !== 0) {
+      document.body.scrollTop = 0;
+    }
+    const root = document.getElementById("root");
+    if (root && root.scrollTop !== 0) {
+      root.scrollTop = 0;
+    }
+  }
+}
+
 function findFabricObjectByBoxId(
   canvas: Canvas,
   boxId: string
@@ -210,30 +248,60 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
         return;
       }
 
+      // Fallback for any other object types
       updateBoxTransformRef.current(boxId, { x, y });
     };
 
-    // ── Live On-Canvas Text Editing Listener ──
-    const handleTextChanged = (event: { target?: FabricObject }) => {
+    const handleTextEditingEntered = (event: { target?: FabricObject }) => {
       const target = event.target;
-      if (!target || target.type !== "textbox") return;
+      if (target && target.type === "textbox") {
+        const textObj = target as Textbox;
+        patchHiddenTextarea(textObj.hiddenTextarea);
+      }
+      resetAllScrolls();
+    };
+
+    const handleEditingExited = (
+      event: { target?: FabricObject }
+    ) => {
+      const target = event.target;
+
+      if (!target || target.type !== "textbox") {
+        return;
+      }
 
       const data = getObjectCustomData(target);
-      const boxId = data?.boxId;
-      if (typeof boxId !== "string") return;
 
-      const textObj = target as Textbox;
-      const newText = textObj.text ?? "";
-      updateTextBoxRef.current(boxId, { text: newText });
+      const boxId = data?.boxId;
+
+      if (typeof boxId !== "string") {
+        return;
+      }
+
+      const textbox = target as Textbox;
+
+      const finalText = textbox.text ?? "";
+
+      updateTextBoxRef.current(boxId, {
+        text: finalText,
+      });
+      resetAllScrolls();
     };
+
+    const handleWindowScroll = () => {
+      resetAllScrolls();
+    };
+    window.addEventListener("scroll", handleWindowScroll, { passive: true });
 
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", handleSelectionCleared);
     canvas.on("object:modified", handleObjectModified);
-    canvas.on("text:changed", handleTextChanged);
+    canvas.on("text:editing:entered", handleTextEditingEntered);
+    canvas.on("text:editing:exited", handleEditingExited);
 
     return () => {
+      window.removeEventListener("scroll", handleWindowScroll);
       canvas.dispose();
       fabricCanvasRef.current = null;
       initialRenderCompleteRef.current = false;
@@ -254,14 +322,16 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
     async function renderTemplate() {
       if (!canvas) return;
 
-      canvas.clear();
+      // ── Stage 1: Build all new objects OFF-canvas ──
+      // We do NOT touch the current canvas until everything is ready.
+      const newObjects: FabricObject[] = [];
 
       const currentTemplate = templateRef.current;
       const bgUrl =
         useEditorStore.getState().temporaryBackgroundImageUrl ??
         currentTemplate.background.imageUrl;
 
-      // 1. Render Background
+      // 1a. Prepare Background
       if (bgUrl) {
         try {
           const image = await FabricImage.fromURL(bgUrl);
@@ -285,29 +355,48 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
             });
             (image as unknown as { data: FabricCustomData }).data = customData;
 
-            canvas.add(image);
-            canvas.moveObjectTo(image, 0);
+            newObjects.push(image);
           }
         } catch (err) {
           if (!cancelled) console.error("Failed to load background:", err);
         }
       }
 
-      // 2. Render Template Boxes
+      // 1b. Prepare Template Boxes
       const boxes = currentTemplate.boxes;
 
       for (const box of boxes) {
         if (cancelled) return;
 
         if (box.type === "text") {
-          const fObj = textBoxToFabric(box, previewDataRef.current, {
-            width: documentWidth,
-            height: documentHeight,
+          const textObject = textBoxToFabric(
+            box,
+            previewDataRef.current,
+            {
+              width: documentWidth,
+              height: documentHeight,
+            }
+          );
+
+          textObject.on("editing:entered", () => {
+            patchHiddenTextarea(textObject.hiddenTextarea);
+            resetAllScrolls();
           });
-          if (cancelled) return;
-          canvas.add(fObj);
-          continue;
-        }
+
+          textObject.on("editing:exited", () => {
+            const data = getObjectCustomData(textObject);
+            const boxId = data?.boxId;
+            if (typeof boxId !== "string") {
+              return;
+            }
+            updateTextBoxRef.current(boxId, {
+              text: textObject.text ?? "",
+            });
+            resetAllScrolls();
+          });
+
+          newObjects.push(textObject);
+        }        
 
         if (box.type === "qr") {
           try {
@@ -317,11 +406,7 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
             });
             if (cancelled) return;
 
-            const exists = canvas.getObjects().some((o) => {
-              const d = getObjectCustomData(o);
-              return d?.boxId === box.id;
-            });
-            if (!exists) canvas.add(fObj);
+            newObjects.push(fObj);
           } catch (err) {
             if (!cancelled) console.error("Failed to render QR:", box.id, err);
           }
@@ -329,6 +414,21 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
       }
 
       if (cancelled) return;
+
+      // ── Stage 2: Atomic swap — remove old, add new, single render ──
+      // Discard selection first to avoid stale reference errors
+      canvas.discardActiveObject();
+
+      // Remove all existing objects in one pass (no intermediate renders)
+      const oldObjects = canvas.getObjects().slice();
+      for (const obj of oldObjects) {
+        canvas.remove(obj);
+      }
+
+      // Add all new objects
+      for (const obj of newObjects) {
+        canvas.add(obj);
+      }
 
       // 3. Restore selection if one was active
       const pendingId = useEditorStore.getState().selectedBoxId;
@@ -400,6 +500,24 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
             height: documentHeight,
           });
           if (cancelled) return;
+
+          fObj.on("editing:entered", () => {
+            patchHiddenTextarea(fObj.hiddenTextarea);
+            resetAllScrolls();
+          });
+
+          fObj.on("editing:exited", () => {
+            const data = getObjectCustomData(fObj);
+            const boxId = data?.boxId;
+            if (typeof boxId !== "string") {
+              return;
+            }
+            updateTextBoxRef.current(boxId, {
+              text: fObj.text ?? "",
+            });
+            resetAllScrolls();
+          });
+
           canvas.add(fObj);
 
           const pendingId = useEditorStore.getState().selectedBoxId;
@@ -461,6 +579,14 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
     for (const box of template.boxes) {
       const fObj = findFabricObjectByBoxId(canvas, box.id);
       if (!fObj) continue;
+
+      if (
+        box.type === "text" &&
+        fObj.type === "textbox" &&
+        (fObj as Textbox).isEditing
+      ) {
+        continue;
+      }
 
       if (box.type === "text") {
         const newLeft = percentageToPixels(box.x, documentWidth);

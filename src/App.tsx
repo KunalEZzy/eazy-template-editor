@@ -24,17 +24,23 @@ function App() {
     (state) => state.setTemplate
   );
 
-  // Dynamically expand #root to full width to support a clean sidebar layout
-  // and eliminate horizontal overflow issues.
+  // Dynamically pin #root to fixed full viewport to prevent any browser auto-scroll
   useEffect(() => {
     const root = document.getElementById("root");
     if (root) {
-      root.style.width = "100%";
-      root.style.maxWidth = "100%";
+      root.style.width = "100vw";
+      root.style.maxWidth = "100vw";
+      root.style.height = "100vh";
+      root.style.maxHeight = "100vh";
+      root.style.position = "fixed";
+      root.style.inset = "0";
+      root.style.overflow = "hidden";
       root.style.borderInline = "none";
       root.style.margin = "0";
       root.style.padding = "0";
     }
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
   }, []);
 
   useEffect(() => {

@@ -89,8 +89,6 @@ export function PropertiesPanel() {
           padding: 6px 8px;
           border: 1px solid var(--border);
           border-radius: 6px;
-          background: #f9fafb;
-          color: #111827;
           background: var(--input-bg);
           color: var(--input-text);
           font-size: 12px;
@@ -110,7 +108,6 @@ export function PropertiesPanel() {
         }
         .prop-input:focus {
           border-color: #7c3aed;
-          background: transparent;
           box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.12);
         }
         .prop-select {
