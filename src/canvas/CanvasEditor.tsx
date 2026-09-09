@@ -334,7 +334,7 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
       // 1a. Prepare Background
       if (bgUrl) {
         try {
-          const image = await FabricImage.fromURL(bgUrl);
+          const image = await FabricImage.fromURL(bgUrl, { crossOrigin: "anonymous" });
           if (cancelled) return;
 
           const iw = image.width ?? documentWidth;

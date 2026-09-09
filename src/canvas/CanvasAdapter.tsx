@@ -21,6 +21,12 @@ export interface FabricCustomData {
   logoUrl?: string;
 }
 
+const SELECTION_CONFIG = {
+  borderScaleFactor: 2,
+  cornerSize: 14,
+  padding: 4,
+};
+
 export function percentageToPixels(
   percentage: number,
   totalPixels: number
@@ -104,6 +110,7 @@ export function textBoxToFabric(
     selectable: !box.locked,
     editable: !box.locked,
     visible: box.visible,
+    ...SELECTION_CONFIG,
     originX: "left",
     originY: "top",
     splitByGrapheme: false,
@@ -170,6 +177,7 @@ export async function qrBoxToFabric(
     selectable: !box.locked,
     evented: !box.locked,
     visible: box.visible,
+    ...SELECTION_CONFIG,
     data: customData,
   });
 

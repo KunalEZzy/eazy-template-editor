@@ -277,6 +277,7 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   setError: (error) => set({ error }),
 
   resetEditor: () => set({ ...initialState }),
+  
 
   // --------------------------------------------------
   // Add Variable
@@ -370,8 +371,8 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         };
       }
 
-      const history = recordHistory(state, state.template);
-
+      const history = recordHistory(state, state.template);      
+      
       return {
         ...history,
         template: {
@@ -432,7 +433,6 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         past: remainingPast,
         future: [...state.future, cloneTemplate(state.template)],
         template: cloneTemplate(previousTemplate),
-        templateLoadVersion: state.templateLoadVersion + 1,
         temporaryBackgroundImageUrl: previousTemplate.background.imageUrl,
         selectedBoxId: null,
         isDirty: true,
@@ -456,7 +456,6 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         past: [...state.past, cloneTemplate(state.template)],
         future: remainingFuture,
         template: cloneTemplate(nextTemplate),
-        templateLoadVersion: state.templateLoadVersion + 1,
         temporaryBackgroundImageUrl: nextTemplate.background.imageUrl,
         selectedBoxId: null,
         isDirty: true,
