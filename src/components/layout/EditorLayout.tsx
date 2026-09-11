@@ -27,7 +27,6 @@ export function EditorLayout() {
   const selectBox = useEditorStore((state) => state.selectBox);
   const updateTextBox = useEditorStore((state) => state.updateTextBox);
   const setSaving = useEditorStore((state) => state.setSaving);
-  const setError = useEditorStore((state) => state.setError);
   const deleteBox = useEditorStore((state) => state.deleteBox);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
@@ -50,6 +49,8 @@ export function EditorLayout() {
     height: 0,
   });
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const workspaceRef = useRef<HTMLDivElement | null>(null);
 
   const toggleTheme = () => {
@@ -65,9 +66,10 @@ export function EditorLayout() {
       return;
     }
 
+    setSaveError(null);
+
     try {
       setSaving(true);
-      setError(null);
 
       const templateToSave =
         temporaryBackgroundImageUrl !== null
@@ -84,7 +86,7 @@ export function EditorLayout() {
       setTemplate(savedTemplate);
     } catch (error) {
       console.error("Failed to save template:", error);
-      setError(
+      setSaveError(
         error instanceof Error ? error.message : "Failed to save template"
       );
     } finally {
@@ -234,6 +236,28 @@ export function EditorLayout() {
         onToggleTheme={toggleTheme}
         onSave={handleSave}
       />
+
+      {saveError && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "8px 20px",
+            background: isDark ? "#3a1f1f" : "#fee2e2",
+            borderBottom: `1px solid ${tokens.border}`,
+            color: isDark ? "#fca5a5" : "#b91c1c",
+            fontSize: "13px",
+            textAlign: "center",
+          }}
+        >
+          <span>
+            Save failed — {saveError}. Your changes are still on the canvas;
+            try again.
+          </span>
+        </div>
+      )}
 
       {/* Main Workspace Frame */}
       <div

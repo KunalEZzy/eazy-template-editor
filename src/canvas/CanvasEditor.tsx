@@ -202,6 +202,7 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
             x,
             y,
             width: pixelsToPercentage(actualWidth, docWidth),
+            rotation: object.angle ?? 0,
           });
           updateTextBoxRef.current(boxId, { fontSize: actualFontSize });
           textObj.set({ width: actualWidth, fontSize: actualFontSize, scaleX: 1, scaleY: 1 });
@@ -211,6 +212,7 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
             x,
             y,
             width: pixelsToPercentage(textObj.width ?? 0, docWidth),
+            rotation: object.angle ?? 0,
           });
           textObj.set({ scaleX: 1, scaleY: 1 });
           textObj.setCoords();
@@ -243,6 +245,7 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
           y,
           width: pixelsToPercentage(qrSize, docWidth),
           height: pixelsToPercentage(qrSize, docHeight),
+          rotation: object.angle ?? 0,
         });
 
         canvas.renderAll();
@@ -250,7 +253,7 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
       }
 
       // Fallback for any other object types
-      updateBoxTransformRef.current(boxId, { x, y });
+      updateBoxTransformRef.current(boxId, { x, y, rotation: object.angle ?? 0 });
     };
 
     const handleTextEditingEntered = (event: { target?: FabricObject }) => {
