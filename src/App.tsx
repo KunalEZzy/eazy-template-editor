@@ -2,6 +2,14 @@ import { useEditorStore } from "./store/editorStore";
 import { EditorLayout } from "./components/layout/EditorLayout";
 import { useEditorToken } from "./hooks/useEditorToken";
 import { useEffect } from "react";
+import { mockTemplate } from "./domain/template/template.mock";
+import { mockPreviewData } from "./domain/variables/preview.mock";
+import { EditorService } from "./editor/editor.service";
+import { LocalTemplateRepository } from "./repository/LocalTemplateRepository";
+import { TemplateNotFoundError } from "./repository/TemplateRepository";
+import type { Template } from "./domain/template/template.types";
+
+const editorService = new EditorService(new LocalTemplateRepository());
 
 function App() {
   const template = useEditorStore(
@@ -12,9 +20,60 @@ function App() {
     (state) => state.error
   );
 
+  const setTemplate = useEditorStore((s) => s.setTemplate);
+  const setPreviewData = useEditorStore((s) => s.setPreviewData);
+  const setError = useEditorStore((s) => s.setError);
+
   // Reads ?token= from the URL, fetches this restaurant's variables
   // from Laravel, and populates the store (template + previewData).
   useEditorToken();
+
+  // Standalone bootstrap: hydrate the persisted template through the existing
+  // service/repository layer. Fall back to the bundled mock only when the
+  // template does not exist yet; any other repository failure is surfaced.
+  useEffect(() => {
+    const hasToken = new URLSearchParams(window.location.search).has("token");
+    if (hasToken) return;
+
+    let cancelled = false;
+    setError(null);
+
+    async function bootstrap() {
+      let loaded: Template;
+
+      try {
+        loaded = await editorService.loadTemplate(mockTemplate.id);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        if (error instanceof TemplateNotFoundError) {
+          loaded = mockTemplate;
+        } else {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Could not load your template data."
+          );
+          return;
+        }
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      setTemplate(loaded);
+      setPreviewData(mockPreviewData);
+    }
+
+    bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setTemplate, setPreviewData, setError]);
 
   // Dynamically expand #root to full width to support a clean sidebar layout
   // and eliminate horizontal overflow issues.
