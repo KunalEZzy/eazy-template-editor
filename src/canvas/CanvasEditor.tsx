@@ -18,6 +18,7 @@ import {
   type FabricCustomData,
 } from "./CanvasAdapter";
 import { calculateTextFit } from "./TextFit";
+import jsPDF from "jspdf";
 
 interface CanvasEditorProps {
   template: Template;
@@ -810,7 +811,8 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
   // ==================================================
 
   useEffect(() => {
-    const handleExport = () => {
+    const handleExport = (e: Event) => {
+     const format = (e as CustomEvent<{ format?: "png" | "pdf" }>).detail?.format ?? "png";
       const canvas = fabricCanvasRef.current;
       if (!canvas) return;
 
@@ -820,7 +822,7 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
         canvas.renderAll();
       }
 
-      const dataUrl = canvas.toDataURL({ format: "png", multiplier: 1 });
+      const dataUrl = canvas.toDataURL({ format: "png", multiplier: 3 });
 
       if (active) {
         canvas.setActiveObject(active);
@@ -830,10 +832,22 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
       const safeName =
         templateRef.current.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") ||
         "template";
-      const link = document.createElement("a");
-      link.download = `${safeName}-${templateRef.current.settings.canvasWidth}x${templateRef.current.settings.canvasHeight}.png`;
-      link.href = dataUrl;
-      link.click();
+      const { canvasWidth, canvasHeight } = templateRef.current.settings;
+
+     if (format === "pdf") {
+       const pdf = new jsPDF({
+          orientation: canvasWidth >= canvasHeight ? "landscape" : "portrait",
+          unit: "px",
+          format: [canvasWidth, canvasHeight],
+       });
+        pdf.addImage(dataUrl, "PNG", 0, 0, canvasWidth, canvasHeight);
+        pdf.save(`${safeName}-${canvasWidth}x${canvasHeight}.pdf`);
+     } else {
+        const link = document.createElement("a");
+        link.download = `${safeName}-${canvasWidth}x${canvasHeight}.png`;
+        link.href = dataUrl;
+        link.click();
+     }
     };
 
     window.addEventListener("eazy:export-canvas", handleExport);

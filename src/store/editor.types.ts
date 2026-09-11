@@ -1,4 +1,5 @@
 import type { Template } from "../domain/template/template.types";
+import type {PreviewData} from "../domain/variables/preview.types";
 
 export type EditorPanel =
   | "layers"
@@ -12,6 +13,8 @@ export interface EditorState {
   // Changes only when a template is loaded/replaced.
   // It does NOT change for normal box movement/resizing.
   templateLoadVersion: number;
+
+  previewData: PreviewData | null ;
 
   temporaryBackgroundImageUrl: string | null;
 

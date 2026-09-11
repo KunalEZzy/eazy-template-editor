@@ -2,9 +2,12 @@ import type { QRBox, TextBox } from "../domain/box/box.types";
 import type { Template } from "../domain/template/template.types";
 import type { EditorPanel } from "./editor.types";
 import type { TextVariable, QRVariable } from "../domain/variables/variables.types";
+import type { PreviewData } from "../domain/variables/preview.types";
 
 export interface EditorActions {
   setTemplate: (template: Template) => void;
+
+  setPreviewData: (previewData: PreviewData) => void;
 
   selectBox: (boxId: string | null) => void;
 

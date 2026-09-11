@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useEditorStore } from "../../store/editorStore";
 import { CanvasEditor } from "../../canvas/CanvasEditor";
-import { mockPreviewData } from "../../domain/variables/preview.mock";
+// import { mockPreviewData } from "../../domain/variables/preview.mock";
 import { EditorService } from "../../editor/editor.service";
 import { LocalTemplateRepository } from "../../repository/LocalTemplateRepository";
 import { EditorHeader } from "./EditorHeader";
@@ -16,6 +16,7 @@ const MAIN_PADDING = 32;
 
 export function EditorLayout() {
   const template = useEditorStore((state) => state.template);
+  const previewData = useEditorStore((state) => state.previewData);
   const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
   const isSaving = useEditorStore((state) => state.isSaving);
   const isDirty = useEditorStore((state) => state.isDirty);
@@ -170,7 +171,7 @@ export function EditorLayout() {
     };
   }, []);
 
-  if (!template) {
+  if (!template || !previewData) {
     return null;
   }
 
@@ -318,7 +319,7 @@ export function EditorLayout() {
                 >
                   <CanvasEditor
                     template={template}
-                    previewData={mockPreviewData}
+                    previewData={previewData}
                   />
                 </div>
               </div>
