@@ -39,7 +39,11 @@ export function EditorHeader({
   onSave,
 }: EditorHeaderProps) {
   const handleDownload = () => {
-    window.dispatchEvent(new CustomEvent("eazy:export-canvas"));
+    window.dispatchEvent(new CustomEvent("eazy:export-canvas", { detail: { format: "png" } }));
+  };
+
+  const handleDownloadPdf = () => {
+    window.dispatchEvent(new CustomEvent("eazy:export-canvas", { detail: { format: "pdf" } }));
   };
 
   return (
@@ -181,6 +185,29 @@ export function EditorHeader({
           title="Download high-resolution image"
         >
           ⬇️ Download PNG
+        </button>
+
+        {/* Export / Download PDF Button */}
+       <button
+          type="button"
+          onClick={handleDownloadPdf}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "6px 14px",
+            backgroundColor: tokens.toolBtnBg,
+            border: `1px solid ${tokens.toolBtnBorder}`,
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: "13px",
+            color: tokens.textActive,
+            transition: "all 0.2s",
+         }}
+          title="Download as PDF"
+        >
+          ⬇️ Download PDF
         </button>
 
         <button

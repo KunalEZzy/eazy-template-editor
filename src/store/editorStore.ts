@@ -32,6 +32,7 @@ const recordHistory = (
 const initialState: EditorState = {
   template: null,
   templateLoadVersion: 0,
+  previewData: null,
   temporaryBackgroundImageUrl: null,
   selectedBoxId: null,
   zoom: 1,
@@ -64,6 +65,8 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
       past: [],
       future: [],
     })),
+
+    setPreviewData: (previewData) => set({ previewData }),
 
   // --------------------------------------------------
   // Selection
