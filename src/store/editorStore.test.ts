@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useEditorStore } from "./editorStore";
 import { mockTemplate } from "../domain/template/template.mock";
 import { isTemplate } from "../domain/template/template.validation";
+import type { QRBox } from "../domain/box/box.types";
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
@@ -304,6 +305,44 @@ describe("editor store P0", () => {
 
       expect(isTemplate(state.template)).toBe(true);
       expect(state.isDirty).toBe(true);
+    });
+  });
+
+  describe("updateQRBox regeneration trigger", () => {
+    const contentCases: Array<{
+      label: string;
+      changes: Partial<Omit<QRBox, "id" | "type">>;
+    }> = [
+      { label: "foregroundColor", changes: { foregroundColor: "#123456" } },
+      { label: "backgroundColor", changes: { backgroundColor: "#FEDCBA" } },
+      { label: "logoUrl", changes: { logoUrl: "https://example.com/logo.png" } },
+      { label: "variable", changes: { variable: "resQRPayEazy" } },
+    ];
+
+    it.each(contentCases)(
+      "increments templateLoadVersion when $label changes",
+      ({ changes }) => {
+        const before = useEditorStore.getState().templateLoadVersion;
+        useEditorStore.getState().updateQRBox("box-restaurant-qr", changes);
+        expect(useEditorStore.getState().templateLoadVersion).toBe(before + 1);
+      }
+    );
+
+    it("does not increment templateLoadVersion for geometry-only QR edits", () => {
+      const before = useEditorStore.getState().templateLoadVersion;
+      useEditorStore.getState().updateQRBox("box-restaurant-qr", {
+        height: 25,
+      });
+      expect(useEditorStore.getState().templateLoadVersion).toBe(before);
+    });
+
+    it("does not increment templateLoadVersion for box transform edits", () => {
+      const before = useEditorStore.getState().templateLoadVersion;
+      useEditorStore.getState().updateBoxTransform("box-restaurant-qr", {
+        x: 42,
+        rotation: 45,
+      });
+      expect(useEditorStore.getState().templateLoadVersion).toBe(before);
     });
   });
 });

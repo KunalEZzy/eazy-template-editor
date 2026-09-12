@@ -149,6 +149,14 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
       // Record history only for non-color edits (e.g. variable, logoUrl)
       const history = isColorOnly ? {} : recordHistory(state, state.template);
 
+      const affectsRenderedQr = keys.some(
+        (key) =>
+          key === "foregroundColor" ||
+          key === "backgroundColor" ||
+          key === "logoUrl" ||
+          key === "variable"
+      );
+
       const boxes = state.template.boxes.map((b) => {
         if (b.id !== boxId || b.type !== "qr") {
           return b;
@@ -162,6 +170,9 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
 
       return {
         ...history,
+        ...(affectsRenderedQr
+          ? { templateLoadVersion: state.templateLoadVersion + 1 }
+          : {}),
         template: {
           ...state.template,
           boxes,
