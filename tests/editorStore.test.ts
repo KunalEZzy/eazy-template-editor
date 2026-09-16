@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useEditorStore } from "./editorStore";
-import { mockTemplate } from "../domain/template/template.mock";
-import { isTemplate } from "../domain/template/template.validation";
-import type { QRBox } from "../domain/box/box.types";
+import { useEditorStore } from "../src/store/editorStore";
+import { mockTemplate } from "../src/domain/template/template.mock";
+import { isTemplate } from "../src/domain/template/template.validation";
+import type { QRBox } from "../src/domain/box/box.types";
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));

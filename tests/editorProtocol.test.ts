@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { isEditorInitMessage, EDITOR_PROTOCOL_VERSION } from "./editorProtocol";
-import { mockTemplate } from "../domain/template/template.mock";
+import { isEditorInitMessage, EDITOR_PROTOCOL_VERSION } from "../src/integration/editorProtocol";
+import { mockTemplate } from "../src/domain/template/template.mock";
 
 function validInit(overrides?: Partial<Record<string, unknown>>) {
   return {

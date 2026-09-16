@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useEditorStore } from "../store/editorStore";
-import { applyEditorInitMessage } from "./masterBootstrap";
-import { EDITOR_PROTOCOL_VERSION } from "./editorProtocol";
-import { mockTemplate } from "../domain/template/template.mock";
-import { mockPreviewData } from "../domain/variables/preview.mock";
-import { isTemplate } from "../domain/template/template.validation";
+import { useEditorStore } from "../src/store/editorStore";
+import { applyEditorInitMessage } from "../src/integration/masterBootstrap";
+import { EDITOR_PROTOCOL_VERSION } from "../src/integration/editorProtocol";
+import { mockTemplate } from "../src/domain/template/template.mock";
+import { mockPreviewData } from "../src/domain/variables/preview.mock";
+import { isTemplate } from "../src/domain/template/template.validation";
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
@@ -30,6 +30,22 @@ function validTemplateInit() {
       mode: "master" as const,
       template: clone(mockTemplate),
       previewData: clone(mockPreviewData),
+      capabilities: { canSave: true },
+    },
+  };
+}
+
+/**
+ * Mimics the exact Laravel blade payload for Master EDIT: it carries only
+ * mode/template/capabilities and never a previewData field.
+ */
+function legacyEditTemplateInit() {
+  return {
+    type: "EDITOR_INIT" as const,
+    version: EDITOR_PROTOCOL_VERSION,
+    payload: {
+      mode: "master" as const,
+      template: clone(mockTemplate),
       capabilities: { canSave: true },
     },
   };
@@ -90,6 +106,14 @@ describe("applyEditorInitMessage", () => {
       expect(state.template).not.toBeNull();
       expect(isTemplate(state.template)).toBe(true);
       expect(state.template?.id).toBe(mockTemplate.id);
+    });
+
+    it("does not set previewData when the Laravel payload carries no previewData field", () => {
+      applyEditorInitMessage(legacyEditTemplateInit());
+
+      const state = useEditorStore.getState();
+      expect(state.template?.id).toBe(mockTemplate.id);
+      expect(state.previewData).toBeNull();
     });
 
     it("sets previewData when provided", () => {

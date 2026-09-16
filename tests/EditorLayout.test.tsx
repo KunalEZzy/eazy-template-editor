@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
-import { useEditorStore } from "../../store/editorStore";
-import { mockTemplate } from "../../domain/template/template.mock";
-import { mockPreviewData } from "../../domain/variables/preview.mock";
-import { EditorLayout } from "./EditorLayout";
+import { useEditorStore } from "../src/store/editorStore";
+import { mockTemplate } from "../src/domain/template/template.mock";
+import { mockPreviewData } from "../src/domain/variables/preview.mock";
+import { EditorLayout } from "../src/components/layout/EditorLayout";
 
 const mockSaveTemplate = vi.hoisted(() => vi.fn());
 
-vi.mock("../../editor/editor.service", () => {
+vi.mock("../src/editor/editor.service", () => {
   class MockEditorService {
     saveTemplate = mockSaveTemplate;
   }
   return {
     EditorService:
-      MockEditorService as unknown as typeof import("../../editor/editor.service").EditorService,
+      MockEditorService as unknown as typeof import("../src/editor/editor.service").EditorService,
   };
 });
 

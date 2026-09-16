@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { LocalTemplateRepository } from "./LocalTemplateRepository";
+import { LocalTemplateRepository } from "../src/repository/LocalTemplateRepository";
 import {
   InvalidTemplateDataError,
   TemplateNotFoundError,
-} from "./TemplateRepository";
-import { mockTemplate } from "../domain/template/template.mock";
+} from "../src/repository/TemplateRepository";
+import { mockTemplate } from "../src/domain/template/template.mock";
 
 const STORAGE_KEY = "eazy-template-editor:templates";
 const storage = new Map<string, string>();

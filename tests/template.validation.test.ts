@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { isTemplate } from "./template.validation";
-import { mockTemplate } from "./template.mock";
+import { isTemplate } from "../src/domain/template/template.validation";
+import { mockTemplate } from "../src/domain/template/template.mock";
 
 function clone(): Record<string, unknown> {
   return JSON.parse(JSON.stringify(mockTemplate)) as Record<string, unknown>;
