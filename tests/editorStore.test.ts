@@ -221,12 +221,11 @@ describe("editor store P0", () => {
   });
 
   describe("updateQRBox", () => {
-    it("updates QR properties including optional logoUrl and preserves base properties", () => {
+    it("updates QR properties and preserves base properties", () => {
       const before = clone(stateTemplate());
 
       useEditorStore.getState().updateQRBox("box-restaurant-qr", {
         foregroundColor: "#0000FF",
-        logoUrl: "https://example.com/logo.png",
         height: 25,
       });
 
@@ -235,7 +234,6 @@ describe("editor store P0", () => {
       if (box.type === "qr") {
         expect(box.foregroundColor).toBe("#0000FF");
         expect(box.backgroundColor).toBe("#FFFFFF");
-        expect(box.logoUrl).toBe("https://example.com/logo.png");
         expect(box.x).toBe(35);
         expect(box.y).toBe(65);
         expect(box.width).toBe(30);
@@ -361,7 +359,6 @@ describe("editor store P0", () => {
     }> = [
       { label: "foregroundColor", changes: { foregroundColor: "#123456" } },
       { label: "backgroundColor", changes: { backgroundColor: "#FEDCBA" } },
-      { label: "logoUrl", changes: { logoUrl: "https://example.com/logo.png" } },
       { label: "variable", changes: { variable: "resQRPayEazy" } },
     ];
 

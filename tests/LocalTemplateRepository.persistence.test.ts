@@ -79,7 +79,6 @@ function buildTemplate(overrides: Partial<Record<string, unknown>> = {}): Templa
         visible: true,
         foregroundColor: "#001122",
         backgroundColor: "#FFFFFF",
-        logoUrl: "https://example.com/logo.png",
       },
       {
         id: "box-image",
@@ -174,7 +173,6 @@ describe("LocalTemplateRepository persistence P0", () => {
       const qrBox = loaded.boxes.find((b) => b.type === "qr");
       expect(qrBox?.type).toBe("qr");
       if (qrBox && qrBox.type === "qr") {
-        expect(qrBox.logoUrl).toBe("https://example.com/logo.png");
         expect(qrBox.rotation).toBe(-15);
       }
 

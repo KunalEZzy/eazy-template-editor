@@ -149,14 +149,13 @@ setTemplate: (template) =>
           (key) => key === "foregroundColor" || key === "backgroundColor"
         );
 
-      // Record history only for non-color edits (e.g. variable, logoUrl)
+      // Record history only for non-color edits
       const history = isColorOnly ? {} : recordHistory(state, state.template);
 
       const affectsRenderedQr = keys.some(
         (key) =>
           key === "foregroundColor" ||
           key === "backgroundColor" ||
-          key === "logoUrl" ||
           key === "variable"
       );
 

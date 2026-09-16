@@ -18,7 +18,6 @@ export interface FabricCustomData {
   foregroundColor?: string;
   backgroundColor?: string;
   variable?: string;
-  logoUrl?: string;
 }
 
 const SELECTION_CONFIG = {
@@ -160,7 +159,6 @@ export async function qrBoxToFabric(
     foregroundColor: box.foregroundColor,
     backgroundColor: box.backgroundColor,
     variable: box.variable,
-    logoUrl: box.logoUrl,
   };
 
   (image as unknown as { data: FabricCustomData }).data = customData;

@@ -157,10 +157,6 @@ function isBox(value: unknown): value is Box {
       return false;
     }
 
-    if (value.logoUrl !== undefined && typeof value.logoUrl !== "string") {
-      return false;
-    }
-
     return true;
   }
 

@@ -9,7 +9,6 @@ export function PropertiesPanel() {
   const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
   const updateBoxTransform = useEditorStore((state) => state.updateBoxTransform);
   const updateTextBox = useEditorStore((state) => state.updateTextBox);
-  const updateQRBox = useEditorStore((state) => state.updateQRBox);
 
   // Return a clean placeholder if no template or selection is active
   if (!template || !selectedBoxId) {
@@ -159,7 +158,7 @@ export function PropertiesPanel() {
       {box.type === "qr" && (
         <>
           <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: 0 }} />
-          <QRPropertiesSection box={box} updateQRBox={updateQRBox} />
+          <QRPropertiesSection box={box} />
         </>
       )}
 
