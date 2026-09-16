@@ -127,12 +127,6 @@ export function PropertiesPanel() {
       {/* Meta Information */}
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text)" }}>ELEMENT ID</span>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-h)", background: "rgba(124, 58, 237, 0.1)", padding: "2px 6px", borderRadius: "4px" }}>
-            {box.id}
-          </span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text)" }}>TYPE</span>
           <span style={{ fontSize: "11px", fontWeight: 500, color: "var(--text-h)", textTransform: "uppercase" }}>
             {box.type}

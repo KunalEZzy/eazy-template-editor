@@ -58,23 +58,6 @@ export function EditorHeader({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        {/* Logo Icon */}
-        <div
-          style={{
-            width: "28px",
-            height: "28px",
-            background: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
-            borderRadius: "6px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: "bold",
-            color: "#fff",
-            fontSize: "14px",
-          }}
-        >
-          E
-        </div>
         <div>
           <h1
             style={{
