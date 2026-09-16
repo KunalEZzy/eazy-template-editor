@@ -22,9 +22,7 @@ interface EditorHeaderProps {
   selectedBoxId: string | null;
   isDirty: boolean;
   isSaving: boolean;
-  isDark: boolean;
   tokens: DesignTokens;
-  onToggleTheme: () => void;
   onSave: () => void;
 }
 
@@ -33,13 +31,15 @@ export function EditorHeader({
   selectedBoxId,
   isDirty,
   isSaving,
-  isDark,
   tokens,
-  onToggleTheme,
   onSave,
 }: EditorHeaderProps) {
   const handleDownload = () => {
-    window.dispatchEvent(new CustomEvent("eazy:export-canvas"));
+    window.dispatchEvent(new CustomEvent("eazy:export-canvas", { detail: { format: "png" } }));
+  };
+
+  const handleDownloadPdf = () => {
+    window.dispatchEvent(new CustomEvent("eazy:export-canvas", { detail: { format: "pdf" } }));
   };
 
   return (
@@ -121,30 +121,6 @@ export function EditorHeader({
 
       {/* Action Controls */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        {/* Light/Dark Toggle Switch */}
-        <button
-          type="button"
-          onClick={onToggleTheme}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "6px",
-            padding: "6px 12px",
-            backgroundColor: tokens.toolBtnBg,
-            border: `1px solid ${tokens.toolBtnBorder}`,
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "12px",
-            fontWeight: 500,
-            color: tokens.textActive,
-            transition: "all 0.2s",
-          }}
-          title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-        >
-          {isDark ? "☀️ Light" : "🌙 Dark"}
-        </button>
-
         {selectedBoxId && (
           <div
             style={{
@@ -181,6 +157,29 @@ export function EditorHeader({
           title="Download high-resolution image"
         >
           ⬇️ Download PNG
+        </button>
+
+        {/* Export / Download PDF Button */}
+       <button
+          type="button"
+          onClick={handleDownloadPdf}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            padding: "6px 14px",
+            backgroundColor: tokens.toolBtnBg,
+            border: `1px solid ${tokens.toolBtnBorder}`,
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: "13px",
+            color: tokens.textActive,
+            transition: "all 0.2s",
+         }}
+          title="Download as PDF"
+        >
+          ⬇️ Download PDF
         </button>
 
         <button

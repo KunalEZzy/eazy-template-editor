@@ -1,5 +1,19 @@
 import type { Template } from "../domain/template/template.types";
 
+export class TemplateNotFoundError extends Error {
+  constructor(templateId: string) {
+    super(`Template ${templateId} not found`);
+    this.name = "TemplateNotFoundError";
+  }
+}
+
+export class InvalidTemplateDataError extends Error {
+  constructor(message = "Persisted template data is invalid") {
+    super(message);
+    this.name = "InvalidTemplateDataError";
+  }
+}
+
 export interface CreateTemplateInput {
   name: string;
   code: string;

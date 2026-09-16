@@ -32,6 +32,8 @@ const recordHistory = (
 const initialState: EditorState = {
   template: null,
   templateLoadVersion: 0,
+  isInitialized: false,
+  previewData: null,
   temporaryBackgroundImageUrl: null,
   selectedBoxId: null,
   zoom: 1,
@@ -53,17 +55,21 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   // Template
   // --------------------------------------------------
 
-  setTemplate: (template) =>
-    set((state) => ({
-      template,
-      templateLoadVersion: state.templateLoadVersion + 1,
-      temporaryBackgroundImageUrl: null,
-      selectedBoxId: null,
-      isDirty: false,
-      error: null,
-      past: [],
-      future: [],
-    })),
+setTemplate: (template) =>
+      set((state) => ({
+        template,
+        templateLoadVersion: state.templateLoadVersion + 1,
+        temporaryBackgroundImageUrl: null,
+        selectedBoxId: null,
+        isDirty: false,
+        error: null,
+        past: [],
+        future: [],
+      })),
+
+    setInitialized: (isInitialized) => set({ isInitialized }),
+
+    setPreviewData: (previewData) => set({ previewData }),
 
   // --------------------------------------------------
   // Selection
@@ -146,6 +152,14 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
       // Record history only for non-color edits (e.g. variable, logoUrl)
       const history = isColorOnly ? {} : recordHistory(state, state.template);
 
+      const affectsRenderedQr = keys.some(
+        (key) =>
+          key === "foregroundColor" ||
+          key === "backgroundColor" ||
+          key === "logoUrl" ||
+          key === "variable"
+      );
+
       const boxes = state.template.boxes.map((b) => {
         if (b.id !== boxId || b.type !== "qr") {
           return b;
@@ -159,6 +173,9 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
 
       return {
         ...history,
+        ...(affectsRenderedQr
+          ? { templateLoadVersion: state.templateLoadVersion + 1 }
+          : {}),
         template: {
           ...state.template,
           boxes,
@@ -277,6 +294,7 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   setError: (error) => set({ error }),
 
   resetEditor: () => set({ ...initialState }),
+  
 
   // --------------------------------------------------
   // Add Variable
@@ -370,8 +388,8 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         };
       }
 
-      const history = recordHistory(state, state.template);
-
+      const history = recordHistory(state, state.template);      
+      
       return {
         ...history,
         template: {
@@ -432,7 +450,6 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         past: remainingPast,
         future: [...state.future, cloneTemplate(state.template)],
         template: cloneTemplate(previousTemplate),
-        templateLoadVersion: state.templateLoadVersion + 1,
         temporaryBackgroundImageUrl: previousTemplate.background.imageUrl,
         selectedBoxId: null,
         isDirty: true,
@@ -456,7 +473,6 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         past: [...state.past, cloneTemplate(state.template)],
         future: remainingFuture,
         template: cloneTemplate(nextTemplate),
-        templateLoadVersion: state.templateLoadVersion + 1,
         temporaryBackgroundImageUrl: nextTemplate.background.imageUrl,
         selectedBoxId: null,
         isDirty: true,

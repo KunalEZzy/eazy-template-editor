@@ -1,7 +1,7 @@
 import type { TextBox } from "../../domain/box/box.types";
 import { PropertyInput, PropertyTextInput } from "./PropertyInput";
 import { resolveTextVariable } from "../../domain/variables/previewResolver";
-import { mockPreviewData } from "../../domain/variables/preview.mock";
+import { useEditorStore } from "../../store/editorStore";
 
 interface TypographySectionProps {
   box: TextBox;
@@ -21,7 +21,11 @@ export function TypographySection({
   box,
   updateTextBox,
 }: TypographySectionProps) {
-  const currentText = resolveTextVariable(box.variable, mockPreviewData, box.text);
+ const previewData = useEditorStore((state) => state.previewData);
+
+  const currentText = previewData
+    ? resolveTextVariable(box.variable, previewData, box.text)
+    : box.text;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>

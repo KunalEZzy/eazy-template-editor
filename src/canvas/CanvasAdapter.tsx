@@ -21,6 +21,12 @@ export interface FabricCustomData {
   logoUrl?: string;
 }
 
+const SELECTION_CONFIG = {
+  borderScaleFactor: 2,
+  cornerSize: 14,
+  padding: 4,
+};
+
 export function percentageToPixels(
   percentage: number,
   totalPixels: number
@@ -63,7 +69,7 @@ export function applyTextTransform(
 
 export function textBoxToFabric(
   box: TextBox,
-  previewData: PreviewData,
+  previewData: PreviewData | null,
   canvasSize: CanvasSize
 ): Textbox {
   const left = percentageToPixels(box.x, canvasSize.width);
@@ -104,6 +110,7 @@ export function textBoxToFabric(
     selectable: !box.locked,
     editable: !box.locked,
     visible: box.visible,
+    ...SELECTION_CONFIG,
     originX: "left",
     originY: "top",
     splitByGrapheme: false,
@@ -126,7 +133,7 @@ export function textBoxToFabric(
 
 export async function qrBoxToFabric(
   box: QRBox,
-  previewData: PreviewData,
+  previewData: PreviewData | null,
   canvasSize: CanvasSize
 ): Promise<FabricImage> {
   const left = percentageToPixels(box.x, canvasSize.width);
@@ -170,6 +177,7 @@ export async function qrBoxToFabric(
     selectable: !box.locked,
     evented: !box.locked,
     visible: box.visible,
+    ...SELECTION_CONFIG,
     data: customData,
   });
 

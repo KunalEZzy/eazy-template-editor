@@ -52,6 +52,15 @@ export function GeometrySection({ box, updateBoxTransform }: GeometrySectionProp
             onChange={(val) => updateBoxTransform(box.id, { width: val })}
           />
         </div>
+
+        <div style={{ flex: 1 }}>
+         <PropertyInput
+           label="H"
+           value={box.height}
+           step="0.1"
+           onChange={(val) => updateBoxTransform(box.id, { height: val })}
+         />
+        </div>
       </div>
 
       {/* Row 3: Rotation */}

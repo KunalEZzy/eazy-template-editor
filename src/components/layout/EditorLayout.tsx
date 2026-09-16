@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useEditorStore } from "../../store/editorStore";
 import { CanvasEditor } from "../../canvas/CanvasEditor";
-import { mockPreviewData } from "../../domain/variables/preview.mock";
+// import { mockPreviewData } from "../../domain/variables/preview.mock";
 import { EditorService } from "../../editor/editor.service";
 import { LocalTemplateRepository } from "../../repository/LocalTemplateRepository";
 import { EditorHeader } from "./EditorHeader";
@@ -16,6 +16,7 @@ const MAIN_PADDING = 32;
 
 export function EditorLayout() {
   const template = useEditorStore((state) => state.template);
+  const previewData = useEditorStore((state) => state.previewData);
   const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
   const isSaving = useEditorStore((state) => state.isSaving);
   const isDirty = useEditorStore((state) => state.isDirty);
@@ -26,47 +27,28 @@ export function EditorLayout() {
   const selectBox = useEditorStore((state) => state.selectBox);
   const updateTextBox = useEditorStore((state) => state.updateTextBox);
   const setSaving = useEditorStore((state) => state.setSaving);
-  const setError = useEditorStore((state) => state.setError);
   const deleteBox = useEditorStore((state) => state.deleteBox);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
-
-  // Light/Dark mode state initialized from localStorage with user system preferences fallback
-  const [isDark, setIsDark] = useState<boolean>(() => {
-    const saved = localStorage.getItem("eazy-theme");
-    if (saved) {
-      return saved === "dark";
-    }
-    // Fallback to system preference
-    if (typeof window !== "undefined" && window.matchMedia) {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches;
-    }
-    return true; // default to dark
-  });
 
   const [availableWorkspace, setAvailableWorkspace] = useState({
     width: 0,
     height: 0,
   });
 
-  const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const toggleTheme = () => {
-    setIsDark((prev) => {
-      const next = !prev;
-      localStorage.setItem("eazy-theme", next ? "dark" : "light");
-      return next;
-    });
-  };
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
 
   const handleSave = async () => {
     if (!template || !isDirty) {
       return;
     }
 
+    setSaveError(null);
+
     try {
       setSaving(true);
-      setError(null);
 
       const templateToSave =
         temporaryBackgroundImageUrl !== null
@@ -83,7 +65,7 @@ export function EditorLayout() {
       setTemplate(savedTemplate);
     } catch (error) {
       console.error("Failed to save template:", error);
-      setError(
+      setSaveError(
         error instanceof Error ? error.message : "Failed to save template"
       );
     } finally {
@@ -181,29 +163,26 @@ export function EditorLayout() {
     availableHeight: availableWorkspace.height,
   });
 
-  // Core Design Tokens mapping dynamically based on current theme mode
   const tokens = {
-    bg: isDark ? "#121212" : "#f3f4f6", // Main workbench backdrop
-    panelBg: isDark ? "#181818" : "#ffffff", // Sidebar/header backgrounds
-    border: isDark ? "#2d2d2d" : "#e5e7eb", // Dividers & borders
-    text: isDark ? "#a0a0a0" : "#4b5563", // Secondary label/body text
-    textActive: isDark ? "#ffffff" : "#111827", // Primary headings & active text
-    gridDot: isDark ? "#2a2a2a" : "#d1d5db", // Canvas background grid dot color
-    accent: "#7c3aed", // Theme purple accent
-    accentHover: isDark ? "#9333ea" : "#6d28d9",
-    accentLight: isDark ? "#2a1b4e" : "#f3e8ff", // Layer highlight background
-    accentText: isDark ? "#c084fc" : "#6d28d9", // Layer highlight text
-    cardBg: isDark ? "#1e1e1e" : "#ffffff", // Sidebar widgets card background
-    toolBtnBg: isDark ? "#2a2a2a" : "#f3f4f6",
-    toolBtnBorder: isDark ? "#3e3e3e" : "#e5e7eb",
-    shadow: isDark
-      ? "0 10px 25px -5px rgba(0,0,0,0.6), 0 8px 10px -6px rgba(0,0,0,0.6)"
-      : "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
+    bg: "#f3f4f6",
+    panelBg: "#ffffff",
+    border: "#e5e7eb",
+    text: "#4b5563",
+    textActive: "#111827",
+    gridDot: "#d1d5db",
+    accent: "#7c3aed",
+    accentHover: "#6d28d9",
+    accentLight: "#f3e8ff",
+    accentText: "#6d28d9",
+    cardBg: "#ffffff",
+    toolBtnBg: "#f3f4f6",
+    toolBtnBorder: "#e5e7eb",
+    shadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
   };
 
   return (
     <div
-      className={isDark ? "theme-dark" : "theme-light"}
+      className="theme-light"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -228,11 +207,31 @@ export function EditorLayout() {
         selectedBoxId={selectedBoxId}
         isDirty={isDirty}
         isSaving={isSaving}
-        isDark={isDark}
         tokens={tokens}
-        onToggleTheme={toggleTheme}
         onSave={handleSave}
       />
+
+      {saveError && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "8px 20px",
+            background: "#fee2e2",
+            borderBottom: `1px solid ${tokens.border}`,
+            color: "#b91c1c",
+            fontSize: "13px",
+            textAlign: "center",
+          }}
+        >
+          <span>
+            Save failed — {saveError}. Your changes are still on the canvas;
+            try again.
+          </span>
+        </div>
+      )}
 
       {/* Main Workspace Frame */}
       <div
@@ -248,7 +247,6 @@ export function EditorLayout() {
         <LeftSidebar
           template={template}
           selectedBoxId={selectedBoxId}
-          isDark={isDark}
           tokens={tokens}
           onSelectBox={selectBox}
           onUpdateTextBox={updateTextBox}
@@ -318,7 +316,7 @@ export function EditorLayout() {
                 >
                   <CanvasEditor
                     template={template}
-                    previewData={mockPreviewData}
+                    previewData={previewData}
                   />
                 </div>
               </div>

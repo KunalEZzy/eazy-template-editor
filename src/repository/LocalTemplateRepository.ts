@@ -1,12 +1,15 @@
 import type { Template } from "../domain/template/template.types";
 
-import type {
-  CreateTemplateInput,
-  TemplateRepository,
-  UpdateTemplateInput,
+import {
+  InvalidTemplateDataError,
+  TemplateNotFoundError,
+  type CreateTemplateInput,
+  type TemplateRepository,
+  type UpdateTemplateInput,
 } from "./TemplateRepository";
 
 import { mockTemplate } from "../domain/template/template.mock";
+import { isTemplate } from "../domain/template/template.validation";
 
 const STORAGE_KEY = "eazy-template-editor:templates";
 
@@ -20,7 +23,35 @@ export class LocalTemplateRepository
       return [mockTemplate];
     }
 
-    return JSON.parse(stored) as Template[];
+    let parsed: unknown;
+
+    try {
+      parsed = JSON.parse(stored);
+    } catch {
+      throw new InvalidTemplateDataError(
+        "Persisted template data is not valid JSON"
+      );
+    }
+
+    if (!Array.isArray(parsed)) {
+      throw new InvalidTemplateDataError(
+        "Persisted template data is invalid"
+      );
+    }
+
+    const templates: Template[] = [];
+
+    for (const entry of parsed) {
+      if (!isTemplate(entry)) {
+        throw new InvalidTemplateDataError(
+          "Persisted template data is invalid"
+        );
+      }
+
+      templates.push(entry);
+    }
+
+    return templates;
   }
 
   private saveTemplates(templates: Template[]): void {
@@ -38,7 +69,7 @@ export class LocalTemplateRepository
     );
 
     if (!template) {
-      throw new Error(`Template ${id} not found`);
+      throw new TemplateNotFoundError(id);
     }
 
     return template;

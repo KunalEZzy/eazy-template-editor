@@ -98,14 +98,6 @@ export function PropertiesPanel() {
           text-align: right;
           transition: all 0.15s ease;
         }
-        .theme-dark .prop-input {
-          background: #242424;
-          color: #ffffff;
-        }
-        .theme-light .prop-input {
-          background: #f9fafb;
-          color: #111827;
-        }
         .prop-input:focus {
           border-color: #7c3aed;
           box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.12);
@@ -121,10 +113,6 @@ export function PropertiesPanel() {
         .prop-select option {
           background: #ffffff;
           color: #111827;
-        }
-        .theme-dark .prop-select option {
-          background: #181818;
-          color: #ffffff;
         }
       `}</style>
 
