@@ -43,6 +43,8 @@ export function LeftSidebar({
     <aside
       style={{
         width: "260px",
+        minWidth: "260px",
+        flexShrink: 0,
         borderRight: `1px solid ${tokens.border}`,
         background: tokens.panelBg,
         display: "flex",

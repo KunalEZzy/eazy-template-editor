@@ -8,6 +8,7 @@ import { EditorService } from "./editor/editor.service";
 import { LocalTemplateRepository } from "./repository/LocalTemplateRepository";
 import { TemplateNotFoundError } from "./repository/TemplateRepository";
 import type { Template } from "./domain/template/template.types";
+import { useMasterBootstrap } from "./integration/masterBootstrap";
 
 const editorService = new EditorService(new LocalTemplateRepository());
 
@@ -23,6 +24,7 @@ function App() {
   const setTemplate = useEditorStore((s) => s.setTemplate);
   const setPreviewData = useEditorStore((s) => s.setPreviewData);
   const setError = useEditorStore((s) => s.setError);
+  useMasterBootstrap();
 
   // Reads ?token= from the URL, fetches this restaurant's variables
   // from Laravel, and populates the store (template + previewData).
@@ -33,7 +35,9 @@ function App() {
   // template does not exist yet; any other repository failure is surfaced.
   useEffect(() => {
     const hasToken = new URLSearchParams(window.location.search).has("token");
-    if (hasToken) return;
+    const isEmbedded = window.parent !== window;
+
+    if (hasToken || isEmbedded) return;
 
     let cancelled = false;
     setError(null);

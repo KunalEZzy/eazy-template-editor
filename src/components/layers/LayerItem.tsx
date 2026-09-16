@@ -108,7 +108,9 @@ export function LayerItem({
             flex: 1,
           }}
         >
-          {box.id.replace("box-", "")}
+          {"variable" in box
+            ? box.variable
+            : box.id.replace("box-", "")}
         </span>
 
         {/* Locked Indicator */}

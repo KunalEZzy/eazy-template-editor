@@ -308,6 +308,52 @@ describe("editor store P0", () => {
     });
   });
 
+  describe("isInitialized flag (Master CREATE empty state)", () => {
+    it("defaults to false", () => {
+      useEditorStore.getState().resetEditor();
+      expect(useEditorStore.getState().isInitialized).toBe(false);
+    });
+
+    it("setInitialized sets the flag to true", () => {
+      useEditorStore.getState().resetEditor();
+      useEditorStore.getState().setInitialized(true);
+      expect(useEditorStore.getState().isInitialized).toBe(true);
+    });
+
+    it("resetEditor resets isInitialized to false", () => {
+      useEditorStore.getState().setInitialized(true);
+      expect(useEditorStore.getState().isInitialized).toBe(true);
+      useEditorStore.getState().resetEditor();
+      expect(useEditorStore.getState().isInitialized).toBe(false);
+    });
+
+    it("master create: after setInitialized(true) with null template, template stays null", () => {
+      useEditorStore.getState().resetEditor();
+      expect(useEditorStore.getState().template).toBeNull();
+      useEditorStore.getState().setInitialized(true);
+      expect(useEditorStore.getState().isInitialized).toBe(true);
+      expect(useEditorStore.getState().template).toBeNull();
+    });
+
+    it("master create: mockTemplate is never loaded", () => {
+      useEditorStore.getState().resetEditor();
+      useEditorStore.getState().setInitialized(true);
+      expect(useEditorStore.getState().template).not.toEqual(mockTemplate);
+      expect(useEditorStore.getState().template).toBeNull();
+    });
+
+    it("master edit: setTemplate carries the provided template and clears isDirty", () => {
+      useEditorStore.getState().resetEditor();
+      useEditorStore.getState().setInitialized(true);
+      useEditorStore.getState().updateBoxTransform("non-existent-box", { x: 10 });
+      useEditorStore.getState().setTemplate(clone(mockTemplate));
+      const state = useEditorStore.getState();
+      expect(state.template).toEqual(mockTemplate);
+      expect(isTemplate(state.template)).toBe(true);
+      expect(state.isDirty).toBe(false);
+    });
+  });
+
   describe("updateQRBox regeneration trigger", () => {
     const contentCases: Array<{
       label: string;

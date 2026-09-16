@@ -17,6 +17,17 @@ export function useEditorToken() {
 
   useEffect(() => {
     async function load() {
+
+      const isEmbedded = window.parent !== window;
+      console.log("[Editor] Master bootstrap", {
+        isEmbedded,
+        currentOrigin: window.location.origin,
+      });
+
+      if (isEmbedded) {
+          return;
+      }
+
       const token = new URLSearchParams(window.location.search).get("token");
 
       if (!token) {

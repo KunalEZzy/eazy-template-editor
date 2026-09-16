@@ -32,6 +32,7 @@ const recordHistory = (
 const initialState: EditorState = {
   template: null,
   templateLoadVersion: 0,
+  isInitialized: false,
   previewData: null,
   temporaryBackgroundImageUrl: null,
   selectedBoxId: null,
@@ -54,17 +55,19 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   // Template
   // --------------------------------------------------
 
-  setTemplate: (template) =>
-    set((state) => ({
-      template,
-      templateLoadVersion: state.templateLoadVersion + 1,
-      temporaryBackgroundImageUrl: null,
-      selectedBoxId: null,
-      isDirty: false,
-      error: null,
-      past: [],
-      future: [],
-    })),
+setTemplate: (template) =>
+      set((state) => ({
+        template,
+        templateLoadVersion: state.templateLoadVersion + 1,
+        temporaryBackgroundImageUrl: null,
+        selectedBoxId: null,
+        isDirty: false,
+        error: null,
+        past: [],
+        future: [],
+      })),
+
+    setInitialized: (isInitialized) => set({ isInitialized }),
 
     setPreviewData: (previewData) => set({ previewData }),
 

@@ -22,7 +22,7 @@ import jsPDF from "jspdf";
 
 interface CanvasEditorProps {
   template: Template;
-  previewData: PreviewData;
+  previewData: PreviewData | null;
 }
 
 interface SelectionEventPayload {
@@ -94,7 +94,7 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
   const fabricCanvasRef = useRef<Canvas | null>(null);
 
   const templateRef = useRef<Template>(template);
-  const previewDataRef = useRef<PreviewData>(previewData);
+  const previewDataRef = useRef<PreviewData | null>(previewData);
   const isSettingSelectionRef = useRef(false);
   const initialRenderCompleteRef = useRef(false);
   const boxIdsRef = useRef<string>(JSON.stringify(template.boxes.map((b) => b.id)));

@@ -10,6 +10,12 @@ export type EditorPanel =
 export interface EditorState {
   template: Template | null;
 
+  // True once initialization has completed (e.g. an EDITOR_INIT handshake or
+  // a local/standalone bootstrap finished). Used to distinguish "still
+  // loading" from an explicitly initialized-empty Master CREATE state where
+  // `template` is intentionally still null.
+  isInitialized: boolean;
+
   // Changes only when a template is loaded/replaced.
   // It does NOT change for normal box movement/resizing.
   templateLoadVersion: number;

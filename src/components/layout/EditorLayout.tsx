@@ -173,7 +173,7 @@ export function EditorLayout() {
     };
   }, []);
 
-  if (!template || !previewData) {
+  if (!template) {
     return null;
   }
 
