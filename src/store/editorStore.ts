@@ -31,6 +31,7 @@ const recordHistory = (
 
 const initialState: EditorState = {
   template: null,
+  creator: "",
   templateLoadVersion: 0,
   isInitialized: false,
   previewData: null,
@@ -58,6 +59,7 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
 setTemplate: (template) =>
       set((state) => ({
         template,
+        creator: "",
         templateLoadVersion: state.templateLoadVersion + 1,
         temporaryBackgroundImageUrl: null,
         selectedBoxId: null,
@@ -70,6 +72,31 @@ setTemplate: (template) =>
     setInitialized: (isInitialized) => set({ isInitialized }),
 
     setPreviewData: (previewData) => set({ previewData }),
+
+    updateTemplateInfo: (info) =>
+      set((state) => {
+        if (!state.template) {
+          return state;
+        }
+
+        const history = recordHistory(state, state.template);
+
+        return {
+          ...history,
+          template: {
+            ...state.template,
+            ...(info.name !== undefined ? { name: info.name } : {}),
+            ...(info.campaign !== undefined
+              ? { campaign: info.campaign }
+              : {}),
+            ...(info.active !== undefined ? { active: info.active } : {}),
+            updatedAt: new Date().toISOString(),
+          },
+          isDirty: true,
+        };
+      }),
+
+    setCreator: (creator) => set({ creator }),
 
   // --------------------------------------------------
   // Selection

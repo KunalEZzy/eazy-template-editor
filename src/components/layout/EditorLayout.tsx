@@ -25,7 +25,6 @@ export function EditorLayout() {
   );
   const setTemplate = useEditorStore((state) => state.setTemplate);
   const selectBox = useEditorStore((state) => state.selectBox);
-  const updateTextBox = useEditorStore((state) => state.updateTextBox);
   const setSaving = useEditorStore((state) => state.setSaving);
   const deleteBox = useEditorStore((state) => state.deleteBox);
   const undo = useEditorStore((state) => state.undo);
@@ -249,7 +248,6 @@ export function EditorLayout() {
           selectedBoxId={selectedBoxId}
           tokens={tokens}
           onSelectBox={selectBox}
-          onUpdateTextBox={updateTextBox}
           onDeleteBox={deleteBox}
         />
 
