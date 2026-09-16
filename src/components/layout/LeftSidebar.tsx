@@ -7,7 +7,6 @@ import { VariablePicker } from "../variables/VariablePicker";
 interface LeftSidebarProps {
   template: Template;
   selectedBoxId: string | null;
-  isDark: boolean;
   tokens: DesignTokens;
 
   onSelectBox: (boxId: string | null) => void;
@@ -27,7 +26,6 @@ interface LeftSidebarProps {
 export function LeftSidebar({
   template,
   selectedBoxId,
-  isDark,
   tokens,
   onSelectBox,
   onUpdateTextBox,
@@ -60,7 +58,6 @@ export function LeftSidebar({
       <LayersPanel
         boxes={template.boxes}
         selectedBoxId={selectedBoxId}
-        isDark={isDark}
         tokens={tokens}
         onSelectBox={onSelectBox}
         onDeleteBox={onDeleteBox}

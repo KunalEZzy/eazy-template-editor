@@ -23,7 +23,7 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -47,19 +47,6 @@
   --tool-btn-border: #e5e7eb;
   --input-bg: #f9fafb;
   --input-text: #111827;
-}
-
-.theme-dark {
-  --text: #9ca3af;
-  --text-h: #f9fafb;
-  --text-muted: #6b7280;
-  --bg: #121212;
-  --panel-bg: #181818;
-  --border: #2d2d2d;
-  --tool-btn-bg: #2a2a2a;
-  --tool-btn-border: #3e3e3e;
-  --input-bg: #242424;
-  --input-text: #ffffff;
 }
 
 html,

@@ -22,9 +22,7 @@ interface EditorHeaderProps {
   selectedBoxId: string | null;
   isDirty: boolean;
   isSaving: boolean;
-  isDark: boolean;
   tokens: DesignTokens;
-  onToggleTheme: () => void;
   onSave: () => void;
 }
 
@@ -33,9 +31,7 @@ export function EditorHeader({
   selectedBoxId,
   isDirty,
   isSaving,
-  isDark,
   tokens,
-  onToggleTheme,
   onSave,
 }: EditorHeaderProps) {
   const handleDownload = () => {
@@ -125,30 +121,6 @@ export function EditorHeader({
 
       {/* Action Controls */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        {/* Light/Dark Toggle Switch */}
-        <button
-          type="button"
-          onClick={onToggleTheme}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "6px",
-            padding: "6px 12px",
-            backgroundColor: tokens.toolBtnBg,
-            border: `1px solid ${tokens.toolBtnBorder}`,
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "12px",
-            fontWeight: 500,
-            color: tokens.textActive,
-            transition: "all 0.2s",
-          }}
-          title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-        >
-          {isDark ? "☀️ Light" : "🌙 Dark"}
-        </button>
-
         {selectedBoxId && (
           <div
             style={{
