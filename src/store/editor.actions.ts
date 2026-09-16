@@ -7,6 +7,8 @@ import type { PreviewData } from "../domain/variables/preview.types";
 export interface EditorActions {
   setTemplate: (template: Template) => void;
 
+  setInitialized: (initialized: boolean) => void;
+
   setPreviewData: (previewData: PreviewData) => void;
 
   selectBox: (boxId: string | null) => void;

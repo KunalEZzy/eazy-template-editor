@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { percentageToPixels, pixelsToPercentage } from "./CanvasAdapter";
+import { percentageToPixels, pixelsToPercentage } from "../src/canvas/CanvasAdapter";
 
 describe("CanvasAdapter coordinate conversion", () => {
   const documentWidth = 1200;

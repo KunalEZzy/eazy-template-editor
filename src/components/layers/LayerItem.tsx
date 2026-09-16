@@ -12,7 +12,6 @@ interface DesignTokens {
 interface LayerItemProps {
   box: Box;
   isSelected: boolean;
-  isDark: boolean;
   tokens: DesignTokens;
   onSelect: (boxId: string) => void;
   onDelete: (boxId: string) => void;
@@ -21,7 +20,6 @@ interface LayerItemProps {
 export function LayerItem({
   box,
   isSelected,
-  isDark,
   tokens,
   onSelect,
   onDelete,
@@ -46,7 +44,7 @@ export function LayerItem({
       onMouseOver={(e) => {
         if (!isSelected) {
           e.currentTarget.style.background =
-            isDark ? "#222" : "#f3f4f6";
+            "#f3f4f6";
         }
       }}
       onMouseOut={(e) => {
@@ -108,7 +106,9 @@ export function LayerItem({
             flex: 1,
           }}
         >
-          {box.id.replace("box-", "")}
+          {"variable" in box
+            ? box.variable
+            : box.id.replace("box-", "")}
         </span>
 
         {/* Locked Indicator */}
@@ -152,7 +152,7 @@ export function LayerItem({
         }}
         onMouseOver={(event) => {
           event.currentTarget.style.background =
-            isDark ? "#3a1f1f" : "#fee2e2";
+            "#fee2e2";
 
           event.currentTarget.style.color =
             "#ef4444";

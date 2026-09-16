@@ -69,7 +69,7 @@ export function applyTextTransform(
 
 export function textBoxToFabric(
   box: TextBox,
-  previewData: PreviewData,
+  previewData: PreviewData | null,
   canvasSize: CanvasSize
 ): Textbox {
   const left = percentageToPixels(box.x, canvasSize.width);
@@ -133,7 +133,7 @@ export function textBoxToFabric(
 
 export async function qrBoxToFabric(
   box: QRBox,
-  previewData: PreviewData,
+  previewData: PreviewData | null,
   canvasSize: CanvasSize
 ): Promise<FabricImage> {
   const left = percentageToPixels(box.x, canvasSize.width);

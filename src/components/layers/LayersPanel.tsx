@@ -13,7 +13,6 @@ interface DesignTokens {
 interface LayersPanelProps {
   boxes: Box[];
   selectedBoxId: string | null;
-  isDark: boolean;
   tokens: DesignTokens;
 
   onSelectBox: (boxId: string) => void;
@@ -24,7 +23,6 @@ interface LayersPanelProps {
 export function LayersPanel({
   boxes,
   selectedBoxId,
-  isDark,
   tokens,
   onSelectBox,
   onDeleteBox,
@@ -72,7 +70,6 @@ export function LayersPanel({
             isSelected={
               selectedBoxId === box.id
             }
-            isDark={isDark}
             tokens={tokens}
             onSelect={onSelectBox}
             onDelete={onDeleteBox}
