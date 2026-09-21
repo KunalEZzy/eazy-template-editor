@@ -1,5 +1,6 @@
 import type { Template } from "../../domain/template/template.types";
 import { validateTemplateMetadata } from "../../domain/template/templateMetadata.validation";
+import { useEditorStore } from "../../store/editorStore";
 
 export interface DesignTokens {
   bg: string;
@@ -48,6 +49,12 @@ export function EditorHeader({
   const handleDownloadPdf = () => {
     window.dispatchEvent(new CustomEvent("eazy:export-canvas", { detail: { format: "pdf" } }));
   };
+
+  // Master modes (create and edit) never expose Download. Restaurant keeps both
+  // Download PNG and Download PDF; the standalone demo (null mode) is unchanged.
+  const editorMode = useEditorStore((state) => state.editorMode);
+  const isMasterMode =
+    editorMode === "master-create" || editorMode === "master-edit";
 
   const submissionValidation = validateTemplateMetadata({
     name: template.name,
@@ -131,51 +138,55 @@ export function EditorHeader({
           </div>
         )}
 
-        {/* Export / Download PNG Button */}
-        <button
-          type="button"
-          onClick={handleDownload}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "6px 14px",
-            backgroundColor: tokens.toolBtnBg,
-            border: `1px solid ${tokens.toolBtnBorder}`,
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: "13px",
-            color: tokens.textActive,
-            transition: "all 0.2s",
-          }}
-          title="Download high-resolution image"
-        >
-          ⬇️ Download PNG
-        </button>
+        {!isMasterMode && (
+          <>
+            {/* Export / Download PNG Button */}
+            <button
+              type="button"
+              onClick={handleDownload}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 14px",
+                backgroundColor: tokens.toolBtnBg,
+                border: `1px solid ${tokens.toolBtnBorder}`,
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "13px",
+                color: tokens.textActive,
+                transition: "all 0.2s",
+              }}
+              title="Download high-resolution image"
+            >
+              ⬇️ Download PNG
+            </button>
 
-        {/* Export / Download PDF Button */}
-       <button
-          type="button"
-          onClick={handleDownloadPdf}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "6px 14px",
-            backgroundColor: tokens.toolBtnBg,
-            border: `1px solid ${tokens.toolBtnBorder}`,
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: "13px",
-            color: tokens.textActive,
-            transition: "all 0.2s",
-         }}
-          title="Download as PDF"
-        >
-          ⬇️ Download PDF
-        </button>
+            {/* Export / Download PDF Button */}
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 14px",
+                backgroundColor: tokens.toolBtnBg,
+                border: `1px solid ${tokens.toolBtnBorder}`,
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "13px",
+                color: tokens.textActive,
+                transition: "all 0.2s",
+              }}
+              title="Download as PDF"
+            >
+              ⬇️ Download PDF
+            </button>
+          </>
+        )}
 
         <button
           type="button"
