@@ -62,6 +62,13 @@ export function BackgroundSection() {
       return;
     }
 
+    // Master Edit locks the master background: do not even fire an upload that
+    // the store would reject.
+    if (isMasterEdit) {
+      event.target.value = "";
+      return;
+    }
+
     if (!file.type.startsWith("image/")) {
       setUploadStatus({ uploading: false, error: "Please choose an image file." });
       event.target.value = "";
@@ -96,6 +103,10 @@ export function BackgroundSection() {
   };
 
   const handleRemove = () => {
+    // Master Edit: the master background is immutable, removing is a no-op.
+    if (isMasterEdit) {
+      return;
+    }
     setTemporaryBackgroundImage(null);
   };
 

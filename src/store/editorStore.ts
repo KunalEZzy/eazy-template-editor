@@ -271,6 +271,13 @@ setTemplate: (template) =>
 
   setTemporaryBackgroundImage: (imageUrl, dimensions) =>
     set((state) => {
+      // Master Edit locks the master background: any upload, replace or remove
+      // must be rejected so the existing background (and all related state such
+      // as history, dirty flag and load version) stays untouched.
+      if (state.editorMode === "master-edit") {
+        return state;
+      }
+
       if (!state.template) {
         return {
           temporaryBackgroundImageUrl: imageUrl,
