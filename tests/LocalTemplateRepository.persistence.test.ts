@@ -251,7 +251,7 @@ describe("LocalTemplateRepository persistence P0", () => {
   });
 
   describe("corrupt / empty storage", () => {
-    it("empty array behaves as no template (current behavior)", async () => {
+    it("empty array still counts as not found for loads", async () => {
       storage.set(STORAGE_KEY, "[]");
 
       const repo = new LocalTemplateRepository();
@@ -259,10 +259,25 @@ describe("LocalTemplateRepository persistence P0", () => {
       await expect(
         repo.getTemplate("template-001")
       ).rejects.toBeInstanceOf(TemplateNotFoundError);
+    });
 
-      await expect(
-        repo.updateTemplate("template-001", updateInput(buildTemplate()))
-      ).rejects.toThrow(/not found/);
+    it("saves a template handed in by an external source (e.g. Master) even when it was never stored", async () => {
+      storage.set(STORAGE_KEY, "[]");
+
+      const repo = new LocalTemplateRepository();
+
+      const saved = await repo.updateTemplate(
+        "104",
+        updateInput(buildTemplate())
+      );
+
+      expect(saved.id).toBe("104");
+      expect(saved.version).toBe(1);
+
+      const loaded = await repo.getTemplate("104");
+      expect(loaded.id).toBe("104");
+      expect(loaded.name).toBe("P0 Round Trip Template");
+      expect(loaded.background).toEqual(buildTemplate().background);
     });
 
     it("invalid JSON surfaces InvalidTemplateDataError on the save path", async () => {

@@ -113,7 +113,25 @@ export class LocalTemplateRepository
     );
 
     if (index === -1) {
-      throw new Error(`Template ${id} not found`);
+      // Templates can arrive from an external source (e.g. the Master parent
+      // page) without ever being recorded in local storage. Save is an upsert
+      // so the first local save of such a template succeeds instead of failing
+      // with "Template not found". The update contract is partial, but the
+      // editor always saves every editable field in one shot (see
+      // EditorService.saveTemplate), so the upserted row is complete.
+      const created: Template = {
+        id,
+        ...input,
+        active: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as Template;
+
+      templates.push(created);
+
+      this.saveTemplates(templates);
+
+      return created;
     }
 
     const existing = templates[index];

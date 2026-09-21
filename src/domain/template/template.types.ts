@@ -27,6 +27,13 @@ export type CampaignType =
   | "eatout"
   | "foodie-awards";
 
+export const SUPPORTED_CAMPAIGNS: readonly CampaignType[] = [
+  "pay-eazy-tent-card",
+  "pay-eazy-standee",
+  "eatout",
+  "foodie-awards",
+];
+
 export const CAMPAIGN_OPTIONS: ReadonlyArray<{
   value: CampaignType;
   label: string;

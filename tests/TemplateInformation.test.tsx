@@ -145,4 +145,20 @@ describe("TemplateInformation (replaces Quick Tools)", () => {
     expect(state.template!.name).toBe(mockTemplate.name);
     expect(state.isDirty).toBe(false);
   });
+
+  it("shows a name validation error only after the field is touched", () => {
+    render(<Harness />);
+
+    expect(
+      screen.queryByText("Template name is required.")
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByDisplayValue(mockTemplate.name), {
+      target: { value: "   " },
+    });
+
+    expect(
+      screen.getByText("Template name is required.")
+    ).toBeInTheDocument();
+  });
 });

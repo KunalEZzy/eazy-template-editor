@@ -63,15 +63,17 @@ describe("EditorLayout save failure recovery", () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/save failed/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/we couldn't save your template/i)
+      ).toBeInTheDocument();
     });
 
     expect(
-      screen.getByText(/storage quota exceeded/i)
-    ).toBeInTheDocument();
-    expect(
       screen.getByText(/your changes are still on the canvas/i)
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/storage quota exceeded/i)
+    ).not.toBeInTheDocument();
 
     expect(useEditorStore.getState().error).toBeNull();
     expect(useEditorStore.getState().isDirty).toBe(true);
@@ -93,7 +95,9 @@ describe("EditorLayout save failure recovery", () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/save failed/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/we couldn't save your template/i)
+      ).toBeInTheDocument();
     });
 
     expect(useEditorStore.getState().isDirty).toBe(true);

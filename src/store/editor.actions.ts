@@ -63,6 +63,11 @@ export interface EditorActions {
 
   setError: (error: string | null) => void;
 
+  setSubmitStatus: (
+    status: "idle" | "saving" | "success" | "error",
+    message?: string | null
+  ) => void;
+
   resetEditor: () => void;
 
   addVariable: (variable: TextVariable | QRVariable) => void;

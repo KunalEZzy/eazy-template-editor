@@ -1,4 +1,5 @@
 import type { Template } from "../../domain/template/template.types";
+import { validateTemplateMetadata } from "../../domain/template/templateMetadata.validation";
 
 export interface DesignTokens {
   bg: string;
@@ -22,8 +23,11 @@ interface EditorHeaderProps {
   selectedBoxId: string | null;
   isDirty: boolean;
   isSaving: boolean;
+  submitStatus: "idle" | "saving" | "success" | "error";
+  submitMessage: string | null;
   tokens: DesignTokens;
   onSave: () => void;
+  onSubmit: () => void;
 }
 
 export function EditorHeader({
@@ -31,8 +35,11 @@ export function EditorHeader({
   selectedBoxId,
   isDirty,
   isSaving,
+  submitStatus,
+  submitMessage,
   tokens,
   onSave,
+  onSubmit,
 }: EditorHeaderProps) {
   const handleDownload = () => {
     window.dispatchEvent(new CustomEvent("eazy:export-canvas", { detail: { format: "png" } }));
@@ -41,6 +48,11 @@ export function EditorHeader({
   const handleDownloadPdf = () => {
     window.dispatchEvent(new CustomEvent("eazy:export-canvas", { detail: { format: "pdf" } }));
   };
+
+  const submissionValidation = validateTemplateMetadata({
+    name: template.name,
+    campaign: template.campaign,
+  });
 
   return (
     <header
@@ -205,6 +217,84 @@ export function EditorHeader({
             "Save Template"
           )}
         </button>
+
+        {/* Submit Template Button — enabled only when required metadata is valid
+            and no submission is in flight. Sends the canonical template to the
+            trusted parent via an integration boundary, never directly to Laravel. */}
+        {submitStatus === "success" ? (
+          <button
+            type="button"
+            onClick={onSubmit}
+            title={submitMessage ?? "Template submitted successfully."}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 16px",
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontWeight: 600,
+              fontSize: "13px",
+              boxShadow: "0 2px 4px rgba(5, 150, 105, 0.3)",
+              transition: "all 0.2s",
+            }}
+          >
+            Submitted ✓
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={!submissionValidation.valid || submitStatus === "saving"}
+            title={
+              submissionValidation.valid
+                ? "Submit this template to the admin portal."
+                : "Complete the required template metadata (name, campaign) to submit."
+            }
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 16px",
+              background: submissionValidation.valid
+                ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                : tokens.toolBtnBg,
+              color: submissionValidation.valid ? "#fff" : tokens.text,
+              border: submissionValidation.valid
+                ? "none"
+                : `1px solid ${tokens.toolBtnBorder}`,
+              borderRadius: "4px",
+              cursor: submissionValidation.valid ? "pointer" : "not-allowed",
+              fontWeight: 600,
+              fontSize: "13px",
+              boxShadow: submissionValidation.valid
+                ? "0 2px 4px rgba(5, 150, 105, 0.3)"
+                : "none",
+              transition: "all 0.2s",
+            }}
+          >
+            {submitStatus === "saving" ? (
+              <>
+                <div
+                  style={{
+                    width: "12px",
+                    height: "12px",
+                    border: `2px solid ${submissionValidation.valid ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.1)"}`,
+                    borderTopColor: submissionValidation.valid ? "#fff" : tokens.textActive,
+                    borderRadius: "50%",
+                    animation: "spin 0.8s linear infinite",
+                  }}
+                />
+                Submitting…
+              </>
+            ) : (
+              "Submit Template"
+            )}
+          </button>
+        )}
       </div>
     </header>
   );

@@ -45,6 +45,8 @@ const initialState: EditorState = {
   isLoading: false,
   isSaving: false,
   error: null,
+  submitStatus: "idle",
+  submitMessage: null,
   past: [],
   future: [],
 };
@@ -65,6 +67,8 @@ setTemplate: (template) =>
         selectedBoxId: null,
         isDirty: false,
         error: null,
+        submitStatus: "idle",
+        submitMessage: null,
         past: [],
         future: [],
       })),
@@ -318,6 +322,9 @@ setTemplate: (template) =>
   setSaving: (isSaving) => set({ isSaving }),
 
   setError: (error) => set({ error }),
+
+  setSubmitStatus: (submitStatus, submitMessage = null) =>
+    set({ submitStatus, submitMessage }),
 
   resetEditor: () => set({ ...initialState }),
   

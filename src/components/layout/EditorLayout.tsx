@@ -8,6 +8,10 @@ import { EditorHeader } from "./EditorHeader";
 import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { calculateCanvasDisplaySize } from "../../utils/canvasDimensions";
+import {
+  requestTemplateSubmit,
+  useMasterSubmit,
+} from "../../integration/masterSubmit";
 
 const repository = new LocalTemplateRepository();
 const editorService = new EditorService(repository);
@@ -30,6 +34,9 @@ export function EditorLayout() {
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
 
+  const submitStatus = useEditorStore((state) => state.submitStatus);
+  const submitMessage = useEditorStore((state) => state.submitMessage);
+
   const [availableWorkspace, setAvailableWorkspace] = useState({
     width: 0,
     height: 0,
@@ -38,6 +45,27 @@ export function EditorLayout() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const workspaceRef = useRef<HTMLDivElement | null>(null);
+
+  useMasterSubmit();
+
+  const handleSubmit = () => {
+    if (!template) {
+      return;
+    }
+
+    const templateToSend =
+      temporaryBackgroundImageUrl !== null
+        ? {
+            ...template,
+            background: {
+              ...template.background,
+              imageUrl: temporaryBackgroundImageUrl,
+            },
+          }
+        : template;
+
+    requestTemplateSubmit(templateToSend);
+  };
 
   const handleSave = async () => {
     if (!template || !isDirty) {
@@ -61,11 +89,14 @@ export function EditorLayout() {
           : template;
 
       const savedTemplate = await editorService.saveTemplate(templateToSave);
+
+      const creator = useEditorStore.getState().creator;
       setTemplate(savedTemplate);
+      useEditorStore.getState().setCreator(creator);
     } catch (error) {
       console.error("Failed to save template:", error);
       setSaveError(
-        error instanceof Error ? error.message : "Failed to save template"
+        "We couldn't save your template. Your changes are still on the canvas; please try again."
       );
     } finally {
       setSaving(false);
@@ -206,9 +237,55 @@ export function EditorLayout() {
         selectedBoxId={selectedBoxId}
         isDirty={isDirty}
         isSaving={isSaving}
+        submitStatus={submitStatus}
+        submitMessage={submitMessage}
         tokens={tokens}
         onSave={handleSave}
+        onSubmit={handleSubmit}
       />
+
+      {submitStatus === "error" && submitMessage && (
+        <div
+          role="alert"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "8px 20px",
+            background: "#fee2e2",
+            borderBottom: `1px solid ${tokens.border}`,
+            color: "#b91c1c",
+            fontSize: "13px",
+            textAlign: "center",
+          }}
+        >
+          <span>
+            Submit failed — {submitMessage}. Your changes are still on the
+            canvas; fix the issue and try again.
+          </span>
+        </div>
+      )}
+
+      {submitStatus === "success" && (
+        <div
+          role="status"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "8px 20px",
+            background: "#d1fae5",
+            borderBottom: `1px solid ${tokens.border}`,
+            color: "#065f46",
+            fontSize: "13px",
+            textAlign: "center",
+          }}
+        >
+          <span>Template submitted successfully.</span>
+        </div>
+      )}
 
       {saveError && (
         <div
@@ -225,10 +302,7 @@ export function EditorLayout() {
             textAlign: "center",
           }}
         >
-          <span>
-            Save failed — {saveError}. Your changes are still on the canvas;
-            try again.
-          </span>
+          <span>{saveError}</span>
         </div>
       )}
 

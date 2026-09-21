@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { Template, CampaignType } from "../../domain/template/template.types";
 import { CAMPAIGN_OPTIONS } from "../../domain/template/template.types";
+import { validateTemplateMetadata } from "../../domain/template/templateMetadata.validation";
 import { useEditorStore } from "../../store/editorStore";
 import type { DesignTokens } from "./EditorHeader";
 
@@ -7,6 +9,14 @@ interface TemplateInformationProps {
   template: Template;
   tokens: DesignTokens;
 }
+
+const ERROR_STYLE: React.CSSProperties = {
+  display: "block",
+  fontSize: "10px",
+  color: "#dc2626",
+  marginTop: "4px",
+  textAlign: "left",
+};
 
 export function TemplateInformation({
   template,
@@ -17,6 +27,16 @@ export function TemplateInformation({
     (state) => state.updateTemplateInfo
   );
   const setCreator = useEditorStore((state) => state.setCreator);
+
+  const [touched, setTouched] = useState<{
+    name: boolean;
+    campaign: boolean;
+  }>({ name: false, campaign: false });
+
+  const validation = validateTemplateMetadata({
+    name: template.name,
+    campaign: template.campaign,
+  });
 
   return (
     <div style={{ padding: "16px" }}>
@@ -63,11 +83,15 @@ export function TemplateInformation({
             type="text"
             className="prop-input"
             value={template.name}
-            onChange={(event) =>
-              updateTemplateInfo({ name: event.target.value })
-            }
+            onChange={(event) => {
+              updateTemplateInfo({ name: event.target.value });
+              setTouched((prev) => ({ ...prev, name: true }));
+            }}
             style={{ textAlign: "left" }}
           />
+          {touched.name && validation.errors.name && (
+            <span style={ERROR_STYLE}>{validation.errors.name}</span>
+          )}
         </div>
 
         {/* Created By */}
@@ -112,11 +136,12 @@ export function TemplateInformation({
           <select
             className="prop-select"
             value={template.campaign}
-            onChange={(event) =>
+            onChange={(event) => {
               updateTemplateInfo({
                 campaign: event.target.value as CampaignType,
-              })
-            }
+              });
+              setTouched((prev) => ({ ...prev, campaign: true }));
+            }}
             style={{
               width: "100%",
               padding: "6px 8px",
@@ -138,6 +163,9 @@ export function TemplateInformation({
               </option>
             ))}
           </select>
+          {touched.campaign && validation.errors.campaign && (
+            <span style={ERROR_STYLE}>{validation.errors.campaign}</span>
+          )}
         </div>
 
         {/* Status */}
@@ -182,6 +210,20 @@ export function TemplateInformation({
             <option value="inactive">Inactive</option>
           </select>
         </div>
+
+        {!validation.valid && (
+          <span
+            style={{
+              display: "block",
+              fontSize: "10px",
+              color: tokens.text,
+              marginTop: "2px",
+              textAlign: "left",
+            }}
+          >
+            Complete the required metadata to enable Submit Template.
+          </span>
+        )}
       </div>
     </div>
   );

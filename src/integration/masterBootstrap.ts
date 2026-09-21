@@ -18,6 +18,7 @@ export function applyEditorInitMessage(message: EditorInitMessage): void {
     setInitialized,
     setTemplate,
     setPreviewData,
+    setCreator,
   } = useEditorStore.getState();
 
   setError(null);
@@ -33,6 +34,10 @@ export function applyEditorInitMessage(message: EditorInitMessage): void {
   }
 
   setTemplate(message.payload.template);
+
+  // setTemplate clears creator; restore the original creator for the loaded
+  // template so the info box keeps showing who created it.
+  setCreator(message.payload.createdBy ?? "");
 
   if (message.payload.previewData) {
     setPreviewData(message.payload.previewData);
@@ -87,10 +92,9 @@ export function useMasterBootstrap() {
       try {
         applyEditorInitMessage(message);
       } catch (error) {
+        console.error("Could not initialize the template editor:", error);
         setError(
-          error instanceof Error
-            ? error.message
-            : "Could not initialize the template editor."
+          "We couldn't start the editor. Please refresh the page and try again."
         );
       }
     }

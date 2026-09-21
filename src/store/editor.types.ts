@@ -46,6 +46,14 @@ export interface EditorState {
 
   error: string | null;
 
+  // Master template submit lifecycle. Used by the Submit Template flow that
+  // posts SAVE_REQUEST to the trusted parent and waits for SAVE_SUCCESS /
+  // SAVE_ERROR. Distinct from `isSaving` which remains the local Save
+  // Template (export) flow.
+  submitStatus: "idle" | "saving" | "success" | "error";
+
+  submitMessage: string | null;
+
   // Previous template states.
   past: Template[];
 
