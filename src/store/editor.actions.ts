@@ -1,6 +1,6 @@
 import type { QRBox, TextBox } from "../domain/box/box.types";
 import type { Template, CampaignType } from "../domain/template/template.types";
-import type { EditorPanel } from "./editor.types";
+import type { EditorPanel, EditorRuntimeMode } from "./editor.types";
 import type { TextVariable, QRVariable } from "../domain/variables/variables.types";
 import type { PreviewData } from "../domain/variables/preview.types";
 
@@ -18,6 +18,8 @@ export interface EditorActions {
   }) => void;
 
   setCreator: (creator: string) => void;
+
+  setEditorMode: (mode: EditorRuntimeMode) => void;
 
   selectBox: (boxId: string | null) => void;
 

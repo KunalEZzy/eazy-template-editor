@@ -389,3 +389,39 @@ describe("editor store P0", () => {
     });
   });
 });
+
+describe("editor runtime mode", () => {
+  beforeEach(() => {
+    useEditorStore.getState().resetEditor();
+  });
+
+  it("starts with editorMode null (no mode until a bootstrap flow resolves)", () => {
+    expect(useEditorStore.getState().editorMode).toBeNull();
+  });
+
+  it("does not let setTemplate change the runtime mode", () => {
+    useEditorStore.getState().setEditorMode("restaurant");
+    useEditorStore.getState().setTemplate(clone(mockTemplate));
+
+    expect(useEditorStore.getState().editorMode).toBe("restaurant");
+  });
+
+  it("setEditorMode stores each supported runtime mode", () => {
+    useEditorStore.getState().setEditorMode("master-create");
+    expect(useEditorStore.getState().editorMode).toBe("master-create");
+
+    useEditorStore.getState().setEditorMode("master-edit");
+    expect(useEditorStore.getState().editorMode).toBe("master-edit");
+
+    useEditorStore.getState().setEditorMode("restaurant");
+    expect(useEditorStore.getState().editorMode).toBe("restaurant");
+  });
+
+  it("resetEditor clears the runtime mode back to null", () => {
+    useEditorStore.getState().setEditorMode("master-create");
+
+    useEditorStore.getState().resetEditor();
+
+    expect(useEditorStore.getState().editorMode).toBeNull();
+  });
+});

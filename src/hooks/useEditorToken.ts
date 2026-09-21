@@ -14,6 +14,7 @@ export function useEditorToken() {
   const setPreviewData = useEditorStore((s) => s.setPreviewData);
   const setLoading = useEditorStore((s) => s.setLoading);
   const setError = useEditorStore((s) => s.setError);
+  const setEditorMode = useEditorStore((s) => s.setEditorMode);
 
   useEffect(() => {
     async function load() {
@@ -44,6 +45,12 @@ export function useEditorToken() {
         setError("This editor link is invalid. Please reopen it from the admin panel.");
         return;
       }
+
+      // A valid, decodable token means the restaurant editor flow has actually
+      // started. The standalone demo (no token) and embedded master sessions
+      // never reach this point, so this is the only place restaurant mode is
+      // assigned. Token validation / API behavior is unchanged.
+      setEditorMode("restaurant");
 
       setLoading(true);
       setError(null);
@@ -80,5 +87,5 @@ export function useEditorToken() {
     }
 
     load();
-  }, [setTemplate, setPreviewData, setLoading, setError]);
+  }, [setTemplate, setPreviewData, setLoading, setError, setEditorMode]);
 }

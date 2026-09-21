@@ -98,6 +98,12 @@ describe("applyEditorInitMessage", () => {
 
       expect(useEditorStore.getState().error).toBeNull();
     });
+
+    it("assigns editorMode 'master-create'", () => {
+      applyEditorInitMessage(nullTemplateInit());
+
+      expect(useEditorStore.getState().editorMode).toBe("master-create");
+    });
   });
 
   describe("Master EDIT (template provided)", () => {
@@ -156,6 +162,18 @@ describe("applyEditorInitMessage", () => {
       applyEditorInitMessage(validTemplateInit());
 
       expect(useEditorStore.getState().error).toBeNull();
+    });
+
+    it("assigns editorMode 'master-edit'", () => {
+      applyEditorInitMessage(validTemplateInit());
+
+      expect(useEditorStore.getState().editorMode).toBe("master-edit");
+    });
+
+    it("assigns editorMode 'master-edit' also for the legacy Laravel payload", () => {
+      applyEditorInitMessage(legacyEditTemplateInit());
+
+      expect(useEditorStore.getState().editorMode).toBe("master-edit");
     });
   });
 });

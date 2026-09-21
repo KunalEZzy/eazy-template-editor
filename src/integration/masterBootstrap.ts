@@ -19,6 +19,7 @@ export function applyEditorInitMessage(message: EditorInitMessage): void {
     setTemplate,
     setPreviewData,
     setCreator,
+    setEditorMode,
   } = useEditorStore.getState();
 
   setError(null);
@@ -30,10 +31,12 @@ export function applyEditorInitMessage(message: EditorInitMessage): void {
   // mock background, boxes or preview data.
   if (message.payload.template === null) {
     setTemplate(createEmptyTemplate());
+    setEditorMode("master-create");
     return;
   }
 
   setTemplate(message.payload.template);
+  setEditorMode("master-edit");
 
   // setTemplate clears creator; restore the original creator for the loaded
   // template so the info box keeps showing who created it.

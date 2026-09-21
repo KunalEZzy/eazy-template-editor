@@ -32,6 +32,7 @@ const recordHistory = (
 const initialState: EditorState = {
   template: null,
   creator: "",
+  editorMode: null,
   templateLoadVersion: 0,
   isInitialized: false,
   previewData: null,
@@ -74,6 +75,8 @@ setTemplate: (template) =>
       })),
 
     setInitialized: (isInitialized) => set({ isInitialized }),
+
+    setEditorMode: (editorMode) => set({ editorMode }),
 
     setPreviewData: (previewData) => set({ previewData }),
 
