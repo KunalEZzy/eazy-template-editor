@@ -171,3 +171,86 @@ describe("BackgroundSection (Laravel S3 upload integration)", () => {
     );
   });
 });
+
+describe("BackgroundSection (Phase 3A: Master Create action label)", () => {
+  beforeEach(() => {
+    useEditorStore.getState().resetEditor();
+    useEditorStore.getState().setTemplate(clone(mockTemplate));
+    mockedUpload.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("master-create presents the action as 'Upload Image'", () => {
+    useEditorStore.getState().setEditorMode("master-create");
+
+    renderBackgroundSection();
+
+    expect(
+      screen.getByRole("button", { name: "Upload Image" })
+    ).toBeInTheDocument();
+  });
+
+  it("master-create still shows 'Upload Image' (not 'Change Image') when a background exists", () => {
+    useEditorStore.getState().setEditorMode("master-create");
+    useEditorStore.getState().setTemporaryBackgroundImage(
+      "eazymedia/dynamic_poster/new.jpg"
+    );
+
+    renderBackgroundSection();
+
+    expect(
+      screen.getByRole("button", { name: "Upload Image" })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Change Image" })).toBeNull();
+  });
+
+  it("non-master-create modes keep the existing label behavior", async () => {
+    renderBackgroundSection();
+
+    expect(
+      screen.getByRole("button", { name: "Change Image" })
+    ).toBeInTheDocument();
+
+    cleanup();
+
+    useEditorStore.getState().setEditorMode("master-edit");
+    renderBackgroundSection();
+    expect(
+      screen.getByRole("button", { name: "Change Image" })
+    ).toBeInTheDocument();
+
+    cleanup();
+
+    useEditorStore.getState().setEditorMode("restaurant");
+    renderBackgroundSection();
+    expect(
+      screen.getByRole("button", { name: "Change Image" })
+    ).toBeInTheDocument();
+  });
+
+  it("upload behavior still works in master-create mode", async () => {
+    useEditorStore.getState().setEditorMode("master-create");
+    useEditorStore.getState().setTemporaryBackgroundImage(
+      "eazymedia/dynamic_poster/existing.jpg"
+    );
+    mockedUpload.mockResolvedValueOnce({
+      path: "eazymedia/dynamic_poster/uploaded-new.jpg",
+      fileName: "uploaded-new.jpg",
+    });
+
+    const { input } = renderBackgroundSection();
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [makeFile()] } });
+    });
+
+    expect(mockedUpload).toHaveBeenCalledOnce();
+    expect(useEditorStore.getState().temporaryBackgroundImageUrl).toBe(
+      "eazymedia/dynamic_poster/uploaded-new.jpg"
+    );
+    expect(screen.getByRole("button", { name: "Upload Image" })).toBeEnabled();
+  });
+});

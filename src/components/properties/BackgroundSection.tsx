@@ -21,6 +21,7 @@ export function BackgroundSection() {
   });
 
   const template = useEditorStore((state) => state.template);
+  const editorMode = useEditorStore((state) => state.editorMode);
   const temporaryBackgroundImageUrl = useEditorStore(
     (state) => state.temporaryBackgroundImageUrl
   );
@@ -200,9 +201,11 @@ export function BackgroundSection() {
         >
           {uploadStatus.uploading
             ? "Uploading..."
-            : hasBackground
-              ? "Change Image"
-              : "Upload Image"}
+            : editorMode === "master-create"
+              ? "Upload Image"
+              : hasBackground
+                ? "Change Image"
+                : "Upload Image"}
         </button>
 
         {hasBackground && (
