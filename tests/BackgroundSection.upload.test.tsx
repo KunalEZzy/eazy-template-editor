@@ -207,17 +207,9 @@ describe("BackgroundSection (Phase 3A: Master Create action label)", () => {
     expect(screen.queryByRole("button", { name: "Change Image" })).toBeNull();
   });
 
-  it("non-master-create modes keep the existing label behavior", async () => {
+  it("null and restaurant modes keep the existing label behavior", async () => {
     renderBackgroundSection();
 
-    expect(
-      screen.getByRole("button", { name: "Change Image" })
-    ).toBeInTheDocument();
-
-    cleanup();
-
-    useEditorStore.getState().setEditorMode("master-edit");
-    renderBackgroundSection();
     expect(
       screen.getByRole("button", { name: "Change Image" })
     ).toBeInTheDocument();
@@ -252,5 +244,44 @@ describe("BackgroundSection (Phase 3A: Master Create action label)", () => {
       "eazymedia/dynamic_poster/uploaded-new.jpg"
     );
     expect(screen.getByRole("button", { name: "Upload Image" })).toBeEnabled();
+  });
+});
+
+describe("BackgroundSection (Phase 3B: Master Edit background lock)", () => {
+  beforeEach(() => {
+    useEditorStore.getState().resetEditor();
+    useEditorStore.getState().setTemplate(clone(mockTemplate));
+    useEditorStore.getState().setEditorMode("master-edit");
+    mockedUpload.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("master-edit with a background does not expose Upload/Change Image", () => {
+    renderBackgroundSection();
+
+    expect(
+      screen.queryByRole("button", { name: "Upload Image" })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Change Image" })
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /Upload|Change/ })).toBeNull();
+  });
+
+  it("master-edit does not expose Remove", () => {
+    renderBackgroundSection();
+
+    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
+  });
+
+  it("master-edit keeps the existing background rendered", () => {
+    renderBackgroundSection();
+
+    const img = screen.getByAltText("Template background");
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute("src", mockTemplate.background.imageUrl);
   });
 });

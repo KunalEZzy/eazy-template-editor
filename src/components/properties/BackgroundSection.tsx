@@ -44,6 +44,10 @@ export function BackgroundSection() {
   const hasBackground = Boolean(currentBackgroundUrl);
   const isTemporary = Boolean(temporaryBackgroundImageUrl);
 
+  // Master Edit keeps the master background locked: the preview stays visible
+  // but neither Upload/Change Image nor Remove are offered.
+  const isMasterEdit = editorMode === "master-edit";
+
   const handleUploadClick = () => {
     if (uploadStatus.uploading) {
       return;
@@ -181,53 +185,55 @@ export function BackgroundSection() {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: "6px" }}>
-        <button
-          type="button"
-          onClick={handleUploadClick}
-          disabled={uploadStatus.uploading}
-          style={{
-            flex: 1,
-            padding: "7px 8px",
-            borderRadius: "5px",
-            border: "1px solid var(--border)",
-            background: "var(--tool-btn-bg)",
-            color: "var(--text)",
-            cursor: uploadStatus.uploading ? "not-allowed" : "pointer",
-            fontSize: "11px",
-            fontWeight: 600,
-            opacity: uploadStatus.uploading ? 0.6 : 1,
-          }}
-        >
-          {uploadStatus.uploading
-            ? "Uploading..."
-            : editorMode === "master-create"
-              ? "Upload Image"
-              : hasBackground
-                ? "Change Image"
-                : "Upload Image"}
-        </button>
-
-        {hasBackground && (
+      {!isMasterEdit && (
+        <div style={{ display: "flex", gap: "6px" }}>
           <button
             type="button"
-            onClick={handleRemove}
+            onClick={handleUploadClick}
             disabled={uploadStatus.uploading}
             style={{
-              padding: "7px 10px",
+              flex: 1,
+              padding: "7px 8px",
               borderRadius: "5px",
               border: "1px solid var(--border)",
               background: "var(--tool-btn-bg)",
               color: "var(--text)",
-              cursor: "pointer",
+              cursor: uploadStatus.uploading ? "not-allowed" : "pointer",
               fontSize: "11px",
               fontWeight: 600,
+              opacity: uploadStatus.uploading ? 0.6 : 1,
             }}
           >
-            Remove
+            {uploadStatus.uploading
+              ? "Uploading..."
+              : editorMode === "master-create"
+                ? "Upload Image"
+                : hasBackground
+                  ? "Change Image"
+                  : "Upload Image"}
           </button>
-        )}
-      </div>
+
+          {hasBackground && (
+            <button
+              type="button"
+              onClick={handleRemove}
+              disabled={uploadStatus.uploading}
+              style={{
+                padding: "7px 10px",
+                borderRadius: "5px",
+                border: "1px solid var(--border)",
+                background: "var(--tool-btn-bg)",
+                color: "var(--text)",
+                cursor: "pointer",
+                fontSize: "11px",
+                fontWeight: 600,
+              }}
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
