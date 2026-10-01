@@ -9,6 +9,7 @@ import {
   type EditorSaveSuccessMessage,
   type EditorSaveErrorMessage,
 } from "./editorProtocol";
+import { clearMasterCreateDraft } from "./masterCreateDraft";
 
 const PARENT_ORIGIN = import.meta.env.VITE_EDITOR_PARENT_ORIGIN;
 
@@ -115,6 +116,11 @@ export function applySaveSuccessMessage(message: EditorSaveSuccessMessage): void
   store.setTemplate(message.payload.template);
   store.setCreator(creator);
   store.setSubmitStatus("success", "Template saved successfully.");
+
+  // The template now lives in the database, so the refresh-safety draft has
+  // served its purpose. Clearing it stops a stale draft from being restored
+  // into the next unrelated CREATE session.
+  clearMasterCreateDraft();
 }
 
 /**

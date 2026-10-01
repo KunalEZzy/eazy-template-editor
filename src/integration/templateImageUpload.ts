@@ -1,6 +1,3 @@
-import { getDefaultSubmitBoundary } from "./masterSubmit";
-import { uploadImageThroughMaster } from "./masterImageUpload";
-
 const API_BASE = import.meta.env.VITE_EDITOR_API_BASE ?? "";
 
 export const UPLOAD_IMAGE_ENDPOINT = "/marketing/template/upload-image";
@@ -21,17 +18,18 @@ function buildError(error: TemplateImageUploadError): Error {
   });
 }
 
+/**
+ * Direct multipart upload to Laravel. Only reachable from the standalone and
+ * restaurant/token editor, which authenticate with their own editor token.
+ *
+ * Master mode must never call this: the editor runs in a CloudFront iframe with
+ * no admin session and no CSRF token. There the parent page performs the upload
+ * and pushes the resulting URL in as SET_BACKGROUND_IMAGE (see
+ * integration/masterBootstrap.ts).
+ */
 export async function uploadTemplateImage(
   file: File
 ): Promise<TemplateImageUploadResult> {
-  // Master/embedded editor uploads through the authenticated parent (the admin
-  // session and CSRF token live there, not in the CloudFront iframe). Standalone
-  // and restaurant/token runs keep the existing direct fetch path unchanged.
-  if (getDefaultSubmitBoundary().isEmbedded) {
-    const result = await uploadImageThroughMaster(file);
-    return { path: result.path, fileName: result.fileName };
-  }
-
   const formData = new FormData();
   formData.append("image", file);
 

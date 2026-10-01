@@ -196,45 +196,33 @@ export function isSaveErrorMessage(
 }
 
 // ---------------------------------------------------------------------------
-// Master Image Upload protocol
+// Master Background Image protocol
 // ---------------------------------------------------------------------------
 //
-// inside the Master editor the React app never uploads background images
-// directly to Laravel: a CloudFront-ified iframe has no admin session and no
-// CSRF token. Instead it posts IMAGE_UPLOAD_REQUEST carrying the raw File to
-// the trusted parent, which owns the authenticated session and relays the upload
-// through DynamicPosterController::uploadImage(). The parent replies with
-// IMAGE_UPLOAD_SUCCESS or IMAGE_UPLOAD_ERROR. The File crosses postMessage via
-// the structured clone algorithm (never JSON), so it arrives as a real File.
+// The editor iframe runs on the editor's own origin and holds no admin session
+// and no CSRF token, so it never uploads a background image itself. The
+// authenticated parent page owns the file input, posts the file to
+// DynamicPosterController::uploadImage(), and pushes the resulting CDN URL into
+// the iframe as SET_BACKGROUND_IMAGE. Only the URL crosses the boundary - never
+// the file bytes and never base64.
 
-export interface EditorImageUploadRequestMessage {
-  type: "IMAGE_UPLOAD_REQUEST";
+export interface EditorSetBackgroundImageMessage {
+  type: "SET_BACKGROUND_IMAGE";
   version: typeof EDITOR_PROTOCOL_VERSION;
   payload: {
-    file: File;
+    imageUrl: string;
+    // Echoes of the S3 key and object name the parent already knows. The editor
+    // does not need them today, so they stay optional and are not validated:
+    // tolerating their absence keeps an older parent working against a newer
+    // editor.
+    path?: string;
+    fileName?: string;
   };
 }
 
-export interface EditorImageUploadSuccessMessage {
-  type: "IMAGE_UPLOAD_SUCCESS";
-  version: typeof EDITOR_PROTOCOL_VERSION;
-  payload: {
-    path: string;
-    fileName: string;
-  };
-}
-
-export interface EditorImageUploadErrorMessage {
-  type: "IMAGE_UPLOAD_ERROR";
-  version: typeof EDITOR_PROTOCOL_VERSION;
-  payload: {
-    message: string;
-  };
-}
-
-export function isImageUploadRequestMessage(
+export function isSetBackgroundImageMessage(
   value: unknown
-): value is EditorImageUploadRequestMessage {
+): value is EditorSetBackgroundImageMessage {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -242,7 +230,7 @@ export function isImageUploadRequestMessage(
   const message = value as Record<string, unknown>;
 
   if (
-    message.type !== "IMAGE_UPLOAD_REQUEST" ||
+    message.type !== "SET_BACKGROUND_IMAGE" ||
     message.version !== EDITOR_PROTOCOL_VERSION
   ) {
     return false;
@@ -254,55 +242,15 @@ export function isImageUploadRequestMessage(
 
   const payload = message.payload as Record<string, unknown>;
 
-  return payload.file instanceof File;
+  return isNonEmptyString(payload.imageUrl);
 }
 
-export function isImageUploadSuccessMessage(
-  value: unknown
-): value is EditorImageUploadSuccessMessage {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const message = value as Record<string, unknown>;
-
-  if (
-    message.type !== "IMAGE_UPLOAD_SUCCESS" ||
-    message.version !== EDITOR_PROTOCOL_VERSION
-  ) {
-    return false;
-  }
-
-  if (!message.payload || typeof message.payload !== "object") {
-    return false;
-  }
-
-  const payload = message.payload as Record<string, unknown>;
-
-  return isNonEmptyString(payload.path) && isNonEmptyString(payload.fileName);
-}
-
-export function isImageUploadErrorMessage(
-  value: unknown
-): value is EditorImageUploadErrorMessage {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const message = value as Record<string, unknown>;
-
-  if (
-    message.type !== "IMAGE_UPLOAD_ERROR" ||
-    message.version !== EDITOR_PROTOCOL_VERSION
-  ) {
-    return false;
-  }
-
-  if (!message.payload || typeof message.payload !== "object") {
-    return false;
-  }
-
-  const payload = message.payload as Record<string, unknown>;
-
-  return isNonEmptyString(payload.message);
+// Editor -> parent: open the parent's own file input. The parent holds the admin
+// session and CSRF token, so it is the only side that can upload. The parent
+// treats this as a convenience; its visible upload button remains the
+// authoritative control because a programmatic input.click() can be rejected by
+// the browser when it is no longer inside a user-activation task.
+export interface EditorRequestBackgroundUploadMessage {
+  type: "REQUEST_BACKGROUND_UPLOAD";
+  version: typeof EDITOR_PROTOCOL_VERSION;
 }

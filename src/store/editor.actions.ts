@@ -33,6 +33,14 @@ export interface EditorActions {
     dimensions?: { width: number; height: number }
   ) => void;
 
+  /**
+   * Resize the document to a background image's real aspect ratio and rescale
+   * absolute pixel values (font sizes, bleed) by the same factor, so the
+   * editor shows the artwork at its true proportions with the existing layout
+   * intact. Box geometry is percentage based and therefore unaffected.
+   */
+  matchCanvasToBackground: (imageWidth: number, imageHeight: number) => void;
+
   updateBoxTransform: (
     boxId: string,
     changes: {

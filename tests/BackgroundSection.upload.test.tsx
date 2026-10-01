@@ -17,6 +17,17 @@ vi.mock("../src/integration/templateImageUpload", () => ({
 
 import { uploadTemplateImage } from "../src/integration/templateImageUpload";
 
+vi.mock("../src/integration/masterBootstrap", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/integration/masterBootstrap")>();
+  return {
+    ...actual,
+    requestBackgroundUpload: vi.fn(() => "sent"),
+  };
+});
+
+import { requestBackgroundUpload } from "../src/integration/masterBootstrap";
+
 const mockedUpload = vi.mocked(uploadTemplateImage);
 
 function clone<T>(value: T): T {
@@ -223,27 +234,27 @@ describe("BackgroundSection (Phase 3A: Master Create action label)", () => {
     ).toBeInTheDocument();
   });
 
-  it("upload behavior still works in master-create mode", async () => {
+  it("master-create delegates the upload to the parent instead of uploading itself", () => {
     useEditorStore.getState().setEditorMode("master-create");
     useEditorStore.getState().setTemporaryBackgroundImage(
       "eazymedia/dynamic_poster/existing.jpg"
     );
-    mockedUpload.mockResolvedValueOnce({
-      path: "eazymedia/dynamic_poster/uploaded-new.jpg",
-      fileName: "uploaded-new.jpg",
-    });
 
     const { input } = renderBackgroundSection();
 
-    await act(async () => {
-      fireEvent.change(input, { target: { files: [makeFile()] } });
-    });
+    // The editor holds no admin session, so it must never post the file itself.
+    expect(input).toBeNull();
+    expect(mockedUpload).not.toHaveBeenCalled();
 
-    expect(mockedUpload).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Upload Image" }));
+
+    expect(requestBackgroundUpload).toHaveBeenCalledOnce();
+    expect(mockedUpload).not.toHaveBeenCalled();
+    // The existing background is untouched until the parent pushes the new URL
+    // back as SET_BACKGROUND_IMAGE.
     expect(useEditorStore.getState().temporaryBackgroundImageUrl).toBe(
-      "eazymedia/dynamic_poster/uploaded-new.jpg"
+      "eazymedia/dynamic_poster/existing.jpg"
     );
-    expect(screen.getByRole("button", { name: "Upload Image" })).toBeEnabled();
   });
 });
 

@@ -24,6 +24,10 @@ const SELECTION_CONFIG = {
   borderScaleFactor: 2,
   cornerSize: 14,
   padding: 4,
+  borderColor: "#1f2937",
+  cornerColor: "#1f2937",
+  cornerStrokeColor: "#1f2937",
+  transparentCorners: false,
 };
 
 export function percentageToPixels(

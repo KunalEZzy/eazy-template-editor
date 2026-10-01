@@ -8,10 +8,12 @@ import { EditorHeader } from "./EditorHeader";
 import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { calculateCanvasDisplaySize } from "../../utils/canvasDimensions";
+import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
 import {
   requestTemplateSubmit,
   useMasterSubmit,
 } from "../../integration/masterSubmit";
+import { saveMasterCreateDraft } from "../../integration/masterCreateDraft";
 
 const repository = new LocalTemplateRepository();
 const editorService = new EditorService(repository);
@@ -24,6 +26,7 @@ export function EditorLayout() {
   const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
   const isSaving = useEditorStore((state) => state.isSaving);
   const isDirty = useEditorStore((state) => state.isDirty);
+  const editorMode = useEditorStore((state) => state.editorMode);
   const temporaryBackgroundImageUrl = useEditorStore(
     (state) => state.temporaryBackgroundImageUrl
   );
@@ -47,6 +50,7 @@ export function EditorLayout() {
   const workspaceRef = useRef<HTMLDivElement | null>(null);
 
   useMasterSubmit();
+  useUnsavedChangesGuard();
 
   const handleSubmit = () => {
     if (!template) {
@@ -93,6 +97,10 @@ export function EditorLayout() {
       const creator = useEditorStore.getState().creator;
       setTemplate(savedTemplate);
       useEditorStore.getState().setCreator(creator);
+
+      if (editorMode === "master-create") {
+        saveMasterCreateDraft(savedTemplate);
+      }
     } catch (error) {
       console.error("Failed to save template:", error);
       setSaveError(
@@ -243,6 +251,29 @@ export function EditorLayout() {
         onSave={handleSave}
         onSubmit={handleSubmit}
       />
+
+      {isDirty && editorMode === "master-create" && (
+        <div
+          role="status"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "8px 20px",
+            background: "#fef3c7",
+            borderBottom: `1px solid ${tokens.border}`,
+            color: "#92400e",
+            fontSize: "13px",
+            textAlign: "center",
+          }}
+        >
+          <span>
+            Not submitted yet. This draft is kept in this browser only — press
+            Submit Template to save it to the database and keep it permanently.
+          </span>
+        </div>
+      )}
 
       {submitStatus === "error" && submitMessage && (
         <div

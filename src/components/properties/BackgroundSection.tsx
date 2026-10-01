@@ -6,6 +6,7 @@ import {
 
 import { useEditorStore } from "../../store/editorStore";
 import { uploadTemplateImage } from "../../integration/templateImageUpload";
+import { requestBackgroundUpload } from "../../integration/masterBootstrap";
 
 interface UploadStatus {
   uploading: boolean;
@@ -48,10 +49,34 @@ export function BackgroundSection() {
   // but neither Upload/Change Image nor Remove are offered.
   const isMasterEdit = editorMode === "master-edit";
 
+  /*
+   * In master mode the upload itself is owned by the authenticated parent page:
+   * it holds the admin session and CSRF token, posts the file to Laravel, and
+   * pushes the resulting URL in as SET_BACKGROUND_IMAGE. The iframe must never
+   * attempt its own upload - it has no session, and a request it sent itself
+   * would go unanswered. Here we only ask the parent to open its file input.
+   * Standalone and restaurant/token runs keep the direct fetch, which their own
+   * editor token authenticates.
+   */
+  const isMasterUploadOwnedByParent =
+    isMasterEdit || editorMode === "master-create";
+
   const handleUploadClick = () => {
     if (uploadStatus.uploading) {
       return;
     }
+
+    if (isMasterUploadOwnedByParent) {
+      if (requestBackgroundUpload() === "sent") {
+        setUploadStatus({
+          uploading: false,
+          error:
+            "Choose the image in the file dialog that just opened, or use the Upload Image button above the editor.",
+        });
+      }
+      return;
+    }
+
     fileInputRef.current?.click();
   };
 
@@ -62,9 +87,9 @@ export function BackgroundSection() {
       return;
     }
 
-    // Master Edit locks the master background: do not even fire an upload that
-    // the store would reject.
-    if (isMasterEdit) {
+    // Master modes: the parent page owns the upload. Do not even fire a request
+    // the parent will not answer.
+    if (isMasterUploadOwnedByParent) {
       event.target.value = "";
       return;
     }
@@ -168,15 +193,19 @@ export function BackgroundSection() {
         </div>
       )}
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
-        style={{
-          display: "none",
-        }}
-      />
+      {/* Only the standalone/restaurant direct-fetch path uses this input.
+          In master mode the file is chosen in the parent page instead. */}
+      {!isMasterUploadOwnedByParent && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          style={{
+            display: "none",
+          }}
+        />
+      )}
 
       {uploadStatus.error && (
         <div
