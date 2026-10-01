@@ -395,7 +395,6 @@ export interface FabricCustomData {
   foregroundColor?: string;
   backgroundColor?: string;
   variable?: string;
-  logoUrl?: string;
 }
 ```
 

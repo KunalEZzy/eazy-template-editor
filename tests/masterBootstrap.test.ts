@@ -30,6 +30,7 @@ function validTemplateInit() {
       mode: "master" as const,
       template: clone(mockTemplate),
       previewData: clone(mockPreviewData),
+      createdBy: "Designer One",
       capabilities: { canSave: true },
     },
   };
@@ -37,7 +38,7 @@ function validTemplateInit() {
 
 /**
  * Mimics the exact Laravel blade payload for Master EDIT: it carries only
- * mode/template/capabilities and never a previewData field.
+ * mode/template/createdBy/capabilities and never a previewData field.
  */
 function legacyEditTemplateInit() {
   return {
@@ -46,6 +47,7 @@ function legacyEditTemplateInit() {
     payload: {
       mode: "master" as const,
       template: clone(mockTemplate),
+      createdBy: "Designer One",
       capabilities: { canSave: true },
     },
   };
@@ -96,6 +98,12 @@ describe("applyEditorInitMessage", () => {
 
       expect(useEditorStore.getState().error).toBeNull();
     });
+
+    it("assigns editorMode 'master-create'", () => {
+      applyEditorInitMessage(nullTemplateInit());
+
+      expect(useEditorStore.getState().editorMode).toBe("master-create");
+    });
   });
 
   describe("Master EDIT (template provided)", () => {
@@ -123,11 +131,49 @@ describe("applyEditorInitMessage", () => {
       expect(state.previewData).toEqual(clone(mockPreviewData));
     });
 
+    it("shows the original creator in the info box when the parent provides one", () => {
+      applyEditorInitMessage(legacyEditTemplateInit());
+
+      expect(useEditorStore.getState().creator).toBe("Designer One");
+    });
+
+    it("keeps creator empty when the parent does not provide a createdBy", () => {
+      applyEditorInitMessage({
+        type: "EDITOR_INIT" as const,
+        version: EDITOR_PROTOCOL_VERSION,
+        payload: {
+          mode: "master" as const,
+          template: clone(mockTemplate),
+          capabilities: { canSave: true },
+        },
+      });
+
+      expect(useEditorStore.getState().creator).toBe("");
+    });
+
+    it("keeps creator empty for Master CREATE with no persisted template", () => {
+      applyEditorInitMessage(nullTemplateInit());
+
+      expect(useEditorStore.getState().creator).toBe("");
+    });
+
     it("clears any prior error", () => {
       useEditorStore.getState().setError("old error");
       applyEditorInitMessage(validTemplateInit());
 
       expect(useEditorStore.getState().error).toBeNull();
+    });
+
+    it("assigns editorMode 'master-edit'", () => {
+      applyEditorInitMessage(validTemplateInit());
+
+      expect(useEditorStore.getState().editorMode).toBe("master-edit");
+    });
+
+    it("assigns editorMode 'master-edit' also for the legacy Laravel payload", () => {
+      applyEditorInitMessage(legacyEditTemplateInit());
+
+      expect(useEditorStore.getState().editorMode).toBe("master-edit");
     });
   });
 });

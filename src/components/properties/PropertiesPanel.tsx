@@ -9,7 +9,6 @@ export function PropertiesPanel() {
   const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
   const updateBoxTransform = useEditorStore((state) => state.updateBoxTransform);
   const updateTextBox = useEditorStore((state) => state.updateTextBox);
-  const updateQRBox = useEditorStore((state) => state.updateQRBox);
 
   // Return a clean placeholder if no template or selection is active
   if (!template || !selectedBoxId) {
@@ -127,12 +126,6 @@ export function PropertiesPanel() {
       {/* Meta Information */}
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text)" }}>ELEMENT ID</span>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-h)", background: "rgba(124, 58, 237, 0.1)", padding: "2px 6px", borderRadius: "4px" }}>
-            {box.id}
-          </span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--text)" }}>TYPE</span>
           <span style={{ fontSize: "11px", fontWeight: 500, color: "var(--text-h)", textTransform: "uppercase" }}>
             {box.type}
@@ -165,7 +158,7 @@ export function PropertiesPanel() {
       {box.type === "qr" && (
         <>
           <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: 0 }} />
-          <QRPropertiesSection box={box} updateQRBox={updateQRBox} />
+          <QRPropertiesSection box={box} />
         </>
       )}
 

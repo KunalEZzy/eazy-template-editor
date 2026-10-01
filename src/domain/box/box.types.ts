@@ -53,8 +53,6 @@ export interface QRBox extends BaseBox {
 
   foregroundColor: string;
   backgroundColor: string;
-
-  logoUrl?: string;
 }
 
 export interface ImageBox extends BaseBox {

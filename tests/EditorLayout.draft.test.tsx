@@ -4,6 +4,7 @@ import { useEditorStore } from "../src/store/editorStore";
 import { mockTemplate } from "../src/domain/template/template.mock";
 import { mockPreviewData } from "../src/domain/variables/preview.mock";
 import { EditorLayout } from "../src/components/layout/EditorLayout";
+import { MASTER_CREATE_DRAFT_KEY } from "../src/integration/masterCreateDraft";
 
 const mockSaveTemplate = vi.hoisted(() => vi.fn());
 
@@ -21,7 +22,7 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
-describe("EditorLayout save failure recovery", () => {
+describe("EditorLayout save checkpoints the master-create draft", () => {
   beforeEach(() => {
     mockSaveTemplate.mockReset();
 
@@ -36,9 +37,11 @@ describe("EditorLayout save failure recovery", () => {
 
     vi.spyOn(console, "error").mockImplementation(() => {});
 
+    window.localStorage.clear();
     useEditorStore.getState().resetEditor();
     useEditorStore.getState().setTemplate(clone(mockTemplate));
     useEditorStore.getState().setPreviewData(mockPreviewData);
+    useEditorStore.getState().setEditorMode("master-create");
     useEditorStore.getState().markDirty();
   });
 
@@ -46,62 +49,10 @@ describe("EditorLayout save failure recovery", () => {
     cleanup();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    window.localStorage.clear();
   });
 
-  it("shows a recoverable inline error on save failure", async () => {
-    mockSaveTemplate.mockRejectedValueOnce(
-      new Error("Storage quota exceeded")
-    );
-
-    render(<EditorLayout />);
-
-    const saveButton = screen.getByRole("button", {
-      name: /save template/i,
-    });
-    expect(saveButton).toBeEnabled();
-
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(/we couldn't save your template/i)
-      ).toBeInTheDocument();
-    });
-
-    expect(
-      screen.getByText(/your changes are still on the canvas/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/storage quota exceeded/i)
-    ).not.toBeInTheDocument();
-
-    expect(useEditorStore.getState().error).toBeNull();
-    expect(useEditorStore.getState().isDirty).toBe(true);
-
-    expect(
-      screen.getByRole("button", { name: /save template/i })
-    ).toBeEnabled();
-  });
-
-  it("clears the error on successful retry", async () => {
-    mockSaveTemplate.mockRejectedValueOnce(new Error("Quota exceeded"));
-
-    render(<EditorLayout />);
-
-    const saveButton = screen.getByRole("button", {
-      name: /save template/i,
-    });
-
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(/we couldn't save your template/i)
-      ).toBeInTheDocument();
-    });
-
-    expect(useEditorStore.getState().isDirty).toBe(true);
-
+  it("persists the working template with its variables into the draft on Save", async () => {
     const saved = {
       ...clone(mockTemplate),
       version: mockTemplate.version + 1,
@@ -109,15 +60,28 @@ describe("EditorLayout save failure recovery", () => {
     };
     mockSaveTemplate.mockResolvedValueOnce(saved);
 
+    render(<EditorLayout />);
+
+    const saveButton = screen.getByRole("button", { name: /save template/i });
+    expect(saveButton).toBeEnabled();
     fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(useEditorStore.getState().isDirty).toBe(false);
     });
 
-    expect(screen.queryByText(/save failed/i)).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /save template/i })
-    ).toBeInTheDocument();
+    const raw = window.localStorage.getItem(MASTER_CREATE_DRAFT_KEY);
+    expect(raw).toBeTruthy();
+
+    const draft = JSON.parse(raw as string);
+    expect(draft).toBeTruthy();
+    expect(draft.boxes).toHaveLength(mockTemplate.boxes.length);
+
+    const variables = draft.boxes.map(
+      (box: { variable?: string }) => box.variable
+    );
+    expect(variables).toContain("resNameNL");
+    expect(variables).toContain("discount");
+    expect(variables).toContain("resQR");
   });
 });

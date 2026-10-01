@@ -9,6 +9,7 @@ import type { Template } from "../domain/template/template.types";
 import type { PreviewData } from "../domain/variables/preview.types";
 import { resolveTextVariable } from "../domain/variables/previewResolver";
 import { useEditorStore } from "../store/editorStore";
+import { fitBackgroundToCanvas } from "../utils/backgroundFit";
 import {
   percentageToPixels,
   pixelsToPercentage,
@@ -19,6 +20,7 @@ import {
 } from "./CanvasAdapter";
 import { calculateTextFit } from "./TextFit";
 import jsPDF from "jspdf";
+
 
 interface CanvasEditorProps {
   template: Template;
@@ -107,6 +109,9 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
   const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
   const updateBoxTransform = useEditorStore((state) => state.updateBoxTransform);
   const updateTextBox = useEditorStore((state) => state.updateTextBox);
+  const matchCanvasToBackground = useEditorStore(
+    (state) => state.matchCanvasToBackground
+  );
   const deleteBox = useEditorStore((state) => state.deleteBox);
   const templateLoadVersion = useEditorStore((state) => state.templateLoadVersion);
 
@@ -136,6 +141,8 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
       selection: true,
       preserveObjectStacking: true,
       renderOnAddRemove: false,
+      selectionColor: "rgba(17, 24, 39, 0.08)",
+      selectionBorderColor: "#1f2937",
     });
 
     fabricCanvasRef.current = canvas;
@@ -335,36 +342,54 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
         useEditorStore.getState().temporaryBackgroundImageUrl ??
         currentTemplate.background.imageUrl;
 
-      // 1a. Prepare Background
-      if (bgUrl) {
-        try {
-          const image = await FabricImage.fromURL(bgUrl, { crossOrigin: "anonymous" });
-          if (cancelled) return;
+        // 1a. Prepare Background
+        if (bgUrl) {
+          try {
+            const image = await FabricImage.fromURL(bgUrl, { crossOrigin: "anonymous" });
+            if (cancelled) return;
 
-          const iw = image.width ?? documentWidth;
-          const ih = image.height ?? documentHeight;
+            const iw = image.width ?? documentWidth;
+            const ih = image.height ?? documentHeight;
 
-          if (iw > 0 && ih > 0) {
-            const customData: FabricCustomData = { isBackground: true };
-            image.set({
-              left: 0,
-              top: 0,
-              scaleX: documentWidth / iw,
-              scaleY: documentHeight / ih,
-              selectable: false,
-              evented: false,
-              originX: "left",
-              originY: "top",
-              data: customData,
+            // Match the document to the artwork's real proportions for every
+            // template. All 105 saved templates carry boxes, so restricting
+            // this to empty canvases would have left none of them accurate.
+            // The document size is not persisted (`poster_template` has no
+            // width/height columns), so this re-derives identically on every
+            // load rather than accumulating. The action is a no-op when the
+            // document already matches.
+            matchCanvasToBackground(iw, ih);
+
+            const fit = fitBackgroundToCanvas({
+              imageWidth: iw,
+              imageHeight: ih,
+              canvasWidth: documentWidth,
+              canvasHeight: documentHeight,
             });
-            (image as unknown as { data: FabricCustomData }).data = customData;
 
-            newObjects.push(image);
+            if (fit) {
+              const customData: FabricCustomData = { isBackground: true };
+              image.set({
+                left: fit.left,
+                top: fit.top,
+                // One scale factor for both axes: the artwork is never
+                // stretched, and any overflow is centred and clipped.
+                scaleX: fit.scaleX,
+                scaleY: fit.scaleY,
+                selectable: false,
+                evented: false,
+                originX: "left",
+                originY: "top",
+                data: customData,
+              });
+              (image as unknown as { data: FabricCustomData }).data = customData;
+
+              newObjects.push(image);
+            }
+          } catch (err) {
+            if (!cancelled) console.error("Failed to load background:", err);
           }
-        } catch (err) {
-          if (!cancelled) console.error("Failed to load background:", err);
         }
-      }
 
       // 1b. Prepare Template Boxes
       const boxes = currentTemplate.boxes;
@@ -452,11 +477,11 @@ export function CanvasEditor({ template, previewData }: CanvasEditorProps) {
 
     void renderTemplate();
 
-    return () => {
-      cancelled = true;
-      initialRenderCompleteRef.current = false;
-    };
-  }, [templateLoadVersion, documentWidth, documentHeight]);
+      return () => {
+        cancelled = true;
+        initialRenderCompleteRef.current = false;
+      };
+    }, [templateLoadVersion, documentWidth, documentHeight, matchCanvasToBackground]);
 
   // ==================================================
   // 3. Structural sync — add/remove boxes

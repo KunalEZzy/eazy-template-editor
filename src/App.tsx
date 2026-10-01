@@ -55,10 +55,9 @@ function App() {
         if (error instanceof TemplateNotFoundError) {
           loaded = mockTemplate;
         } else {
+          console.error("Could not load your template data:", error);
           setError(
-            error instanceof Error
-              ? error.message
-              : "Could not load your template data."
+            "We couldn't load your saved template. Please try again in a moment."
           );
           return;
         }

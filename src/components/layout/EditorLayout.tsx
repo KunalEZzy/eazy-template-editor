@@ -8,6 +8,12 @@ import { EditorHeader } from "./EditorHeader";
 import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { calculateCanvasDisplaySize } from "../../utils/canvasDimensions";
+import { useUnsavedChangesGuard } from "../../hooks/useUnsavedChangesGuard";
+import {
+  requestTemplateSubmit,
+  useMasterSubmit,
+} from "../../integration/masterSubmit";
+import { saveMasterCreateDraft } from "../../integration/masterCreateDraft";
 
 const repository = new LocalTemplateRepository();
 const editorService = new EditorService(repository);
@@ -20,16 +26,19 @@ export function EditorLayout() {
   const selectedBoxId = useEditorStore((state) => state.selectedBoxId);
   const isSaving = useEditorStore((state) => state.isSaving);
   const isDirty = useEditorStore((state) => state.isDirty);
+  const editorMode = useEditorStore((state) => state.editorMode);
   const temporaryBackgroundImageUrl = useEditorStore(
     (state) => state.temporaryBackgroundImageUrl
   );
   const setTemplate = useEditorStore((state) => state.setTemplate);
   const selectBox = useEditorStore((state) => state.selectBox);
-  const updateTextBox = useEditorStore((state) => state.updateTextBox);
   const setSaving = useEditorStore((state) => state.setSaving);
   const deleteBox = useEditorStore((state) => state.deleteBox);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
+
+  const submitStatus = useEditorStore((state) => state.submitStatus);
+  const submitMessage = useEditorStore((state) => state.submitMessage);
 
   const [availableWorkspace, setAvailableWorkspace] = useState({
     width: 0,
@@ -39,6 +48,28 @@ export function EditorLayout() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const workspaceRef = useRef<HTMLDivElement | null>(null);
+
+  useMasterSubmit();
+  useUnsavedChangesGuard();
+
+  const handleSubmit = () => {
+    if (!template) {
+      return;
+    }
+
+    const templateToSend =
+      temporaryBackgroundImageUrl !== null
+        ? {
+            ...template,
+            background: {
+              ...template.background,
+              imageUrl: temporaryBackgroundImageUrl,
+            },
+          }
+        : template;
+
+    requestTemplateSubmit(templateToSend);
+  };
 
   const handleSave = async () => {
     if (!template || !isDirty) {
@@ -62,11 +93,18 @@ export function EditorLayout() {
           : template;
 
       const savedTemplate = await editorService.saveTemplate(templateToSave);
+
+      const creator = useEditorStore.getState().creator;
       setTemplate(savedTemplate);
+      useEditorStore.getState().setCreator(creator);
+
+      if (editorMode === "master-create") {
+        saveMasterCreateDraft(savedTemplate);
+      }
     } catch (error) {
       console.error("Failed to save template:", error);
       setSaveError(
-        error instanceof Error ? error.message : "Failed to save template"
+        "We couldn't save your template. Your changes are still on the canvas; please try again."
       );
     } finally {
       setSaving(false);
@@ -207,9 +245,78 @@ export function EditorLayout() {
         selectedBoxId={selectedBoxId}
         isDirty={isDirty}
         isSaving={isSaving}
+        submitStatus={submitStatus}
+        submitMessage={submitMessage}
         tokens={tokens}
         onSave={handleSave}
+        onSubmit={handleSubmit}
       />
+
+      {isDirty && editorMode === "master-create" && (
+        <div
+          role="status"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "8px 20px",
+            background: "#fef3c7",
+            borderBottom: `1px solid ${tokens.border}`,
+            color: "#92400e",
+            fontSize: "13px",
+            textAlign: "center",
+          }}
+        >
+          <span>
+            Not submitted yet. This draft is kept in this browser only — press
+            Submit Template to save it to the database and keep it permanently.
+          </span>
+        </div>
+      )}
+
+      {submitStatus === "error" && submitMessage && (
+        <div
+          role="alert"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "8px 20px",
+            background: "#fee2e2",
+            borderBottom: `1px solid ${tokens.border}`,
+            color: "#b91c1c",
+            fontSize: "13px",
+            textAlign: "center",
+          }}
+        >
+          <span>
+            Submit failed — {submitMessage}. Your changes are still on the
+            canvas; fix the issue and try again.
+          </span>
+        </div>
+      )}
+
+      {submitStatus === "success" && (
+        <div
+          role="status"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "8px 20px",
+            background: "#d1fae5",
+            borderBottom: `1px solid ${tokens.border}`,
+            color: "#065f46",
+            fontSize: "13px",
+            textAlign: "center",
+          }}
+        >
+          <span>Template submitted successfully.</span>
+        </div>
+      )}
 
       {saveError && (
         <div
@@ -226,10 +333,7 @@ export function EditorLayout() {
             textAlign: "center",
           }}
         >
-          <span>
-            Save failed — {saveError}. Your changes are still on the canvas;
-            try again.
-          </span>
+          <span>{saveError}</span>
         </div>
       )}
 
@@ -249,7 +353,6 @@ export function EditorLayout() {
           selectedBoxId={selectedBoxId}
           tokens={tokens}
           onSelectBox={selectBox}
-          onUpdateTextBox={updateTextBox}
           onDeleteBox={deleteBox}
         />
 

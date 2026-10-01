@@ -7,8 +7,16 @@ import { VARIABLE_DEFINITIONS } from "../domain/variables/variable.definitions";
 import { VARIABLE_DEFAULTS } from "../domain/variables/variable.defaults";
 import { findAvailableBoxPlacement } from "../editor/placement/boxPlacement";
 import type { Template } from "../domain/template/template.types";
+import { canvasSizeForImage } from "../utils/backgroundFit";
 
 const MAX_HISTORY = 50;
+
+/**
+ * Upper bound for either document axis when adopting a background image's
+ * aspect ratio. Poster art is frequently 5400x10800; adopting that verbatim
+ * would make every export a 58-megapixel canvas.
+ */
+const MAX_CANVAS_DIMENSION = 4000;
 
 const cloneTemplate = (template: Template): Template => {
   return structuredClone(template);
@@ -31,6 +39,8 @@ const recordHistory = (
 
 const initialState: EditorState = {
   template: null,
+  creator: "",
+  editorMode: null,
   templateLoadVersion: 0,
   isInitialized: false,
   previewData: null,
@@ -44,6 +54,8 @@ const initialState: EditorState = {
   isLoading: false,
   isSaving: false,
   error: null,
+  submitStatus: "idle",
+  submitMessage: null,
   past: [],
   future: [],
 };
@@ -58,18 +70,48 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
 setTemplate: (template) =>
       set((state) => ({
         template,
+        creator: "",
         templateLoadVersion: state.templateLoadVersion + 1,
         temporaryBackgroundImageUrl: null,
         selectedBoxId: null,
         isDirty: false,
         error: null,
+        submitStatus: "idle",
+        submitMessage: null,
         past: [],
         future: [],
       })),
 
     setInitialized: (isInitialized) => set({ isInitialized }),
 
+    setEditorMode: (editorMode) => set({ editorMode }),
+
     setPreviewData: (previewData) => set({ previewData }),
+
+    updateTemplateInfo: (info) =>
+      set((state) => {
+        if (!state.template) {
+          return state;
+        }
+
+        const history = recordHistory(state, state.template);
+
+        return {
+          ...history,
+          template: {
+            ...state.template,
+            ...(info.name !== undefined ? { name: info.name } : {}),
+            ...(info.campaign !== undefined
+              ? { campaign: info.campaign }
+              : {}),
+            ...(info.active !== undefined ? { active: info.active } : {}),
+            updatedAt: new Date().toISOString(),
+          },
+          isDirty: true,
+        };
+      }),
+
+    setCreator: (creator) => set({ creator }),
 
   // --------------------------------------------------
   // Selection
@@ -149,14 +191,13 @@ setTemplate: (template) =>
           (key) => key === "foregroundColor" || key === "backgroundColor"
         );
 
-      // Record history only for non-color edits (e.g. variable, logoUrl)
+      // Record history only for non-color edits
       const history = isColorOnly ? {} : recordHistory(state, state.template);
 
       const affectsRenderedQr = keys.some(
         (key) =>
           key === "foregroundColor" ||
           key === "backgroundColor" ||
-          key === "logoUrl" ||
           key === "variable"
       );
 
@@ -238,6 +279,13 @@ setTemplate: (template) =>
 
   setTemporaryBackgroundImage: (imageUrl, dimensions) =>
     set((state) => {
+      // Master Edit locks the master background: any upload, replace or remove
+      // must be rejected so the existing background (and all related state such
+      // as history, dirty flag and load version) stays untouched.
+      if (state.editorMode === "master-edit") {
+        return state;
+      }
+
       if (!state.template) {
         return {
           temporaryBackgroundImageUrl: imageUrl,
@@ -273,6 +321,59 @@ setTemplate: (template) =>
       };
     }),
 
+  matchCanvasToBackground: (imageWidth, imageHeight) =>
+    set((state) => {
+      if (!state.template) {
+        return state;
+      }
+
+      const { canvasWidth, canvasHeight, bleed } = state.template.settings;
+
+      const matched = canvasSizeForImage({
+        imageWidth,
+        imageHeight,
+        currentWidth: canvasWidth,
+        currentHeight: canvasHeight,
+        maxDimension: MAX_CANVAS_DIMENSION,
+      });
+
+      if (!matched) {
+        return state;
+      }
+
+      const unchanged =
+        matched.width === canvasWidth && matched.height === canvasHeight;
+
+      // The resize is a view-time adaptation: `poster_template` has no width
+      // or height columns, so the document size is never written to the
+      // database. It therefore also runs in master-edit, where existing
+      // templates are opened - refusing there would leave every saved template
+      // stuck on the configured 3:4 document. The master-edit background lock
+      // is untouched: this never alters the background image itself.
+      if (unchanged && matched.typographyScale === 1) {
+        return state;
+      }
+
+      const scale = matched.typographyScale;
+
+      return {
+        template: {
+          ...state.template,
+          settings: {
+            ...state.template.settings,
+            canvasWidth: matched.width,
+            canvasHeight: matched.height,
+            bleed: Math.round(bleed * scale),
+          },
+          boxes: state.template.boxes.map((box) =>
+            box.type === "text"
+              ? { ...box, fontSize: Math.max(1, Math.round(box.fontSize * scale)) }
+              : box
+          ),
+        },
+      };
+    }),
+
   // --------------------------------------------------
   // Active Panel
   // --------------------------------------------------
@@ -292,6 +393,9 @@ setTemplate: (template) =>
   setSaving: (isSaving) => set({ isSaving }),
 
   setError: (error) => set({ error }),
+
+  setSubmitStatus: (submitStatus, submitMessage = null) =>
+    set({ submitStatus, submitMessage }),
 
   resetEditor: () => set({ ...initialState }),
   
