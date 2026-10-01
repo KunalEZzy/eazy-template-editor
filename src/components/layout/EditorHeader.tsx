@@ -1,4 +1,6 @@
 import type { Template } from "../../domain/template/template.types";
+import { validateTemplateMetadata } from "../../domain/template/templateMetadata.validation";
+import { useEditorStore } from "../../store/editorStore";
 
 export interface DesignTokens {
   bg: string;
@@ -22,8 +24,11 @@ interface EditorHeaderProps {
   selectedBoxId: string | null;
   isDirty: boolean;
   isSaving: boolean;
+  submitStatus: "idle" | "saving" | "success" | "error";
+  submitMessage: string | null;
   tokens: DesignTokens;
   onSave: () => void;
+  onSubmit: () => void;
 }
 
 export function EditorHeader({
@@ -31,8 +36,11 @@ export function EditorHeader({
   selectedBoxId,
   isDirty,
   isSaving,
+  submitStatus,
+  submitMessage,
   tokens,
   onSave,
+  onSubmit,
 }: EditorHeaderProps) {
   const handleDownload = () => {
     window.dispatchEvent(new CustomEvent("eazy:export-canvas", { detail: { format: "png" } }));
@@ -41,6 +49,21 @@ export function EditorHeader({
   const handleDownloadPdf = () => {
     window.dispatchEvent(new CustomEvent("eazy:export-canvas", { detail: { format: "pdf" } }));
   };
+
+  // Master modes (create and edit) never expose Download. Restaurant keeps both
+  // Download PNG and Download PDF; the standalone demo (null mode) is unchanged.
+  const editorMode = useEditorStore((state) => state.editorMode);
+  const isMasterMode =
+    editorMode === "master-create" || editorMode === "master-edit";
+
+  // Restaurant never edits the master template, so it does not expose Save or
+  // Submit. Master modes and the standalone demo (null) keep both controls.
+  const isRestaurant = editorMode === "restaurant";
+
+  const submissionValidation = validateTemplateMetadata({
+    name: template.name,
+    campaign: template.campaign,
+  });
 
   return (
     <header
@@ -58,23 +81,6 @@ export function EditorHeader({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        {/* Logo Icon */}
-        <div
-          style={{
-            width: "28px",
-            height: "28px",
-            background: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
-            borderRadius: "6px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: "bold",
-            color: "#fff",
-            fontSize: "14px",
-          }}
-        >
-          E
-        </div>
         <div>
           <h1
             style={{
@@ -136,92 +142,182 @@ export function EditorHeader({
           </div>
         )}
 
-        {/* Export / Download PNG Button */}
-        <button
-          type="button"
-          onClick={handleDownload}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "6px 14px",
-            backgroundColor: tokens.toolBtnBg,
-            border: `1px solid ${tokens.toolBtnBorder}`,
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: "13px",
-            color: tokens.textActive,
-            transition: "all 0.2s",
-          }}
-          title="Download high-resolution image"
-        >
-          ⬇️ Download PNG
-        </button>
+        {!isMasterMode && (
+          <>
+            {/* Export / Download PNG Button */}
+            <button
+              type="button"
+              onClick={handleDownload}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 14px",
+                backgroundColor: tokens.toolBtnBg,
+                border: `1px solid ${tokens.toolBtnBorder}`,
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "13px",
+                color: tokens.textActive,
+                transition: "all 0.2s",
+              }}
+              title="Download high-resolution image"
+            >
+              ⬇️ Download PNG
+            </button>
 
-        {/* Export / Download PDF Button */}
-       <button
-          type="button"
-          onClick={handleDownloadPdf}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "6px 14px",
-            backgroundColor: tokens.toolBtnBg,
-            border: `1px solid ${tokens.toolBtnBorder}`,
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: "13px",
-            color: tokens.textActive,
-            transition: "all 0.2s",
-         }}
-          title="Download as PDF"
-        >
-          ⬇️ Download PDF
-        </button>
+            {/* Export / Download PDF Button */}
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 14px",
+                backgroundColor: tokens.toolBtnBg,
+                border: `1px solid ${tokens.toolBtnBorder}`,
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "13px",
+                color: tokens.textActive,
+                transition: "all 0.2s",
+              }}
+              title="Download as PDF"
+            >
+              ⬇️ Download PDF
+            </button>
+          </>
+        )}
 
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={!isDirty || isSaving}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            padding: "6px 16px",
-            background: isDirty
-              ? "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)"
-              : tokens.toolBtnBg,
-            color: isDirty ? "#fff" : tokens.text,
-            border: isDirty ? "none" : `1px solid ${tokens.toolBtnBorder}`,
-            borderRadius: "4px",
-            cursor: isDirty ? "pointer" : "not-allowed",
-            fontWeight: 600,
-            fontSize: "13px",
-            boxShadow: isDirty ? "0 2px 4px rgba(124, 58, 237, 0.3)" : "none",
-            transition: "all 0.2s",
-          }}
-        >
-          {isSaving ? (
-            <>
-              <div
+        {!isRestaurant && (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!isDirty || isSaving}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 16px",
+              background: isDirty
+                ? "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)"
+                : tokens.toolBtnBg,
+              color: isDirty ? "#fff" : tokens.text,
+              border: isDirty
+                ? "none"
+                : `1px solid ${tokens.toolBtnBorder}`,
+              borderRadius: "4px",
+              cursor: isDirty ? "pointer" : "not-allowed",
+              fontWeight: 600,
+              fontSize: "13px",
+              boxShadow: isDirty ? "0 2px 4px rgba(124, 58, 237, 0.3)" : "none",
+              transition: "all 0.2s",
+            }}
+          >
+            {isSaving ? (
+              <>
+                <div
+                  style={{
+                    width: "12px",
+                    height: "12px",
+                    border: `2px solid ${isDirty ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.1)"}`,
+                    borderTopColor: isDirty ? "#fff" : tokens.textActive,
+                    borderRadius: "50%",
+                    animation: "spin 0.8s linear infinite",
+                  }}
+                />
+                Saving
+              </>
+            ) : (
+              "Save Template"
+            )}
+          </button>
+        )}
+
+        {/* Submit Template Button — enabled only when required metadata is valid
+            and no submission is in flight. Sends the canonical template to the
+            trusted parent via an integration boundary, never directly to Laravel. */}
+        {!isRestaurant && (
+          <>
+            {submitStatus === "success" ? (
+              <button
+                type="button"
+                onClick={onSubmit}
+                title={submitMessage ?? "Template submitted successfully."}
                 style={{
-                  width: "12px",
-                  height: "12px",
-                  border: `2px solid ${isDirty ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.1)"}`,
-                  borderTopColor: isDirty ? "#fff" : tokens.textActive,
-                  borderRadius: "50%",
-                  animation: "spin 0.8s linear infinite",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 16px",
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: "13px",
+                  boxShadow: "0 2px 4px rgba(5, 150, 105, 0.3)",
+                  transition: "all 0.2s",
                 }}
-              />
-              Saving
-            </>
-          ) : (
-            "Save Template"
-          )}
-        </button>
+              >
+                Submitted ✓
+              </button>
+            ) : (
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={!submissionValidation.valid || submitStatus === "saving"}
+            title={
+              submissionValidation.valid
+                ? "Submit this template to the admin portal."
+                : "Complete the required template metadata (name, campaign) to submit."
+            }
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 16px",
+              background: submissionValidation.valid
+                ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                : tokens.toolBtnBg,
+              color: submissionValidation.valid ? "#fff" : tokens.text,
+              border: submissionValidation.valid
+                ? "none"
+                : `1px solid ${tokens.toolBtnBorder}`,
+              borderRadius: "4px",
+              cursor: submissionValidation.valid ? "pointer" : "not-allowed",
+              fontWeight: 600,
+              fontSize: "13px",
+              boxShadow: submissionValidation.valid
+                ? "0 2px 4px rgba(5, 150, 105, 0.3)"
+                : "none",
+              transition: "all 0.2s",
+            }}
+          >
+            {submitStatus === "saving" ? (
+              <>
+                <div
+                  style={{
+                    width: "12px",
+                    height: "12px",
+                    border: `2px solid ${submissionValidation.valid ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.1)"}`,
+                    borderTopColor: submissionValidation.valid ? "#fff" : tokens.textActive,
+                    borderRadius: "50%",
+                    animation: "spin 0.8s linear infinite",
+                  }}
+                />
+                Submitting…
+              </>
+            ) : (
+              "Submit Template"
+            )}
+          </button>
+            )}
+          </>
+        )}
       </div>
     </header>
   );

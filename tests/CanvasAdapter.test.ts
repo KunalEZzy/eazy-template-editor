@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { percentageToPixels, pixelsToPercentage } from "../src/canvas/CanvasAdapter";
+import {
+  percentageToPixels,
+  pixelsToPercentage,
+  textBoxToFabric,
+} from "../src/canvas/CanvasAdapter";
+import { mockTemplate } from "../src/domain/template/template.mock";
+import { mockPreviewData } from "../src/domain/variables/preview.mock";
 
 describe("CanvasAdapter coordinate conversion", () => {
   const documentWidth = 1200;
@@ -24,6 +30,24 @@ describe("CanvasAdapter coordinate conversion", () => {
     const pixels = percentageToPixels(originalPercentage, documentWidth);
     const convertedBack = pixelsToPercentage(pixels, documentWidth);
     expect(convertedBack).toBeCloseTo(originalPercentage, 5);
+  });
+});
+
+describe("CanvasAdapter selection styling", () => {
+  it("uses high-contrast dark selection border and solid corners on the light canvas", () => {
+    const textBox = mockTemplate.boxes.find((box) => box.type === "text");
+    expect(textBox).toBeDefined();
+    expect(textBox && textBox.type).toBe("text");
+
+    const canvas = textBoxToFabric(textBox!, mockPreviewData, {
+      width: 1200,
+      height: 1600,
+    });
+
+    expect(canvas.borderColor).toBe("#1f2937");
+    expect(canvas.cornerColor).toBe("#1f2937");
+    expect(canvas.cornerStrokeColor).toBe("#1f2937");
+    expect(canvas.transparentCorners).toBe(false);
   });
 });
 

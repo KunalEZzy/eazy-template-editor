@@ -1,6 +1,6 @@
 import type { QRBox, TextBox } from "../domain/box/box.types";
-import type { Template } from "../domain/template/template.types";
-import type { EditorPanel } from "./editor.types";
+import type { Template, CampaignType } from "../domain/template/template.types";
+import type { EditorPanel, EditorRuntimeMode } from "./editor.types";
 import type { TextVariable, QRVariable } from "../domain/variables/variables.types";
 import type { PreviewData } from "../domain/variables/preview.types";
 
@@ -10,6 +10,16 @@ export interface EditorActions {
   setInitialized: (initialized: boolean) => void;
 
   setPreviewData: (previewData: PreviewData) => void;
+
+  updateTemplateInfo: (info: {
+    name?: string;
+    campaign?: CampaignType;
+    active?: boolean;
+  }) => void;
+
+  setCreator: (creator: string) => void;
+
+  setEditorMode: (mode: EditorRuntimeMode) => void;
 
   selectBox: (boxId: string | null) => void;
 
@@ -22,6 +32,14 @@ export interface EditorActions {
     imageUrl: string | null,
     dimensions?: { width: number; height: number }
   ) => void;
+
+  /**
+   * Resize the document to a background image's real aspect ratio and rescale
+   * absolute pixel values (font sizes, bleed) by the same factor, so the
+   * editor shows the artwork at its true proportions with the existing layout
+   * intact. Box geometry is percentage based and therefore unaffected.
+   */
+  matchCanvasToBackground: (imageWidth: number, imageHeight: number) => void;
 
   updateBoxTransform: (
     boxId: string,
@@ -54,6 +72,11 @@ export interface EditorActions {
   setSaving: (saving: boolean) => void;
 
   setError: (error: string | null) => void;
+
+  setSubmitStatus: (
+    status: "idle" | "saving" | "success" | "error",
+    message?: string | null
+  ) => void;
 
   resetEditor: () => void;
 
