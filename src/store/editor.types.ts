@@ -71,6 +71,13 @@ export interface EditorState {
 
   submitMessage: string | null;
 
+  // True when Master Edit hydrated the template from this browser's own copy
+  // ("Save Template") instead of the database row, because the local copy is
+  // newer. That work is still not in the database and needs a Submit, so it
+  // survives further local saves and is cleared only once the bootstrap or a
+  // successful Submit replaces the working document with a persisted one.
+  restoredLocalCopy: boolean;
+
   // Previous template states.
   past: Template[];
 

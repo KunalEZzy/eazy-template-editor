@@ -21,6 +21,8 @@ export interface EditorActions {
 
   setEditorMode: (mode: EditorRuntimeMode) => void;
 
+  setRestoredLocalCopy: (restoredLocalCopy: boolean) => void;
+
   selectBox: (boxId: string | null) => void;
 
   updateTextBox: (

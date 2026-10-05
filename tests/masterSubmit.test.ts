@@ -192,6 +192,27 @@ describe("SAVE_SUCCESS handling", () => {
 
     expect(useEditorStore.getState().creator).toBe("Designer One");
   });
+
+  it("drops the browser copy so it can no longer shadow the saved row", () => {
+    window.localStorage.setItem(
+      "eazy-template-editor:templates",
+      JSON.stringify([
+        { ...mockTemplate, name: "Browser copy" },
+        { ...mockTemplate, id: "other", name: "Unrelated" },
+      ])
+    );
+
+    applySaveSuccessMessage(
+      saveSuccess({ ...mockTemplate, name: "Saved name" }, "template-001")
+    );
+
+    const stored = JSON.parse(
+      window.localStorage.getItem("eazy-template-editor:templates") as string
+    );
+    expect(stored).toHaveLength(1);
+    expect(stored[0].id).toBe("other");
+    expect(useEditorStore.getState().restoredLocalCopy).toBe(false);
+  });
 });
 
 describe("SAVE_ERROR handling", () => {

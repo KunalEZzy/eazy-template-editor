@@ -10,6 +10,7 @@ import {
   type EditorSaveErrorMessage,
 } from "./editorProtocol";
 import { clearMasterCreateDraft } from "./masterCreateDraft";
+import { removeStoredTemplate } from "../repository/LocalTemplateRepository";
 
 const PARENT_ORIGIN = import.meta.env.VITE_EDITOR_PARENT_ORIGIN;
 
@@ -121,6 +122,15 @@ export function applySaveSuccessMessage(message: EditorSaveSuccessMessage): void
   // served its purpose. Clearing it stops a stale draft from being restored
   // into the next unrelated CREATE session.
   clearMasterCreateDraft();
+
+  /*
+   * Same reasoning for the browser copy written by "Save Template": the
+   * submitted content is authoritative now, so keeping it would let a stale
+   * local row shadow this database row on the next EDITOR_INIT (and mark the
+   * template dirty for no reason).
+   */
+  removeStoredTemplate(message.payload.template.id);
+  store.setRestoredLocalCopy(false);
 }
 
 /**
