@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { LocalTemplateRepository } from "../src/repository/LocalTemplateRepository";
 import {
+  readStoredTemplate,
+  removeStoredTemplate,
+} from "../src/repository/LocalTemplateRepository";
+import {
   InvalidTemplateDataError,
   TemplateNotFoundError,
 } from "../src/repository/TemplateRepository";
@@ -201,7 +205,7 @@ describe("LocalTemplateRepository persistence P0", () => {
     });
   });
 
-  describe("versioning and optimistic concurrency", () => {
+  describe("versioning and save conflict handling", () => {
     it("increments version exactly once per successful save", async () => {
       const seeded = buildTemplate();
       storage.set(STORAGE_KEY, JSON.stringify([seeded]));
@@ -227,26 +231,33 @@ describe("LocalTemplateRepository persistence P0", () => {
       expect(reloadedAfterSecond.version).toBe(3);
     });
 
-    it("rejects a stale version save and keeps the latest document", async () => {
+    it("accepts a save whose incoming version is behind the stored row", async () => {
+      // Laravel always hands templates back with version 1, so the editor store
+      // legitimately arrives at a save holding 1 while this row has climbed to 3.
+      // That is not a concurrent editor and must never fail the save.
       const seeded = buildTemplate({ version: 3 });
       storage.set(STORAGE_KEY, JSON.stringify([seeded]));
 
       const repo = new LocalTemplateRepository();
 
-      const staleSave = buildTemplate({
-        version: 2,
-        name: "STALE SAVE SHOULD NOT WIN",
-        boxes: [{ ...seeded.boxes[0], id: "box-stale", width: 1, height: 1 }],
+      const outOfSyncSave = buildTemplate({
+        version: 1,
+        name: "Saved from a Laravel round trip",
+        boxes: [{ ...seeded.boxes[0], id: "box-fresh", width: 42 }],
       });
 
-      await expect(
-        repo.updateTemplate(seeded.id, updateInput(staleSave))
-      ).rejects.toThrow(/modified by another session/);
+      const saved = await repo.updateTemplate(
+        seeded.id,
+        updateInput(outOfSyncSave)
+      );
+
+      expect(saved.version).toBe(4);
 
       const loaded = await repo.getTemplate(seeded.id);
-      expect(loaded.version).toBe(3);
-      expect(loaded.name).toBe(seeded.name);
-      expect(loaded.boxes).toEqual(seeded.boxes);
+      expect(loaded.version).toBe(4);
+      expect(loaded.name).toBe("Saved from a Laravel round trip");
+      expect(loaded.boxes).toEqual(outOfSyncSave.boxes);
+      expect(loaded.createdAt).toBe(seeded.createdAt);
     });
   });
 
@@ -306,6 +317,55 @@ describe("LocalTemplateRepository persistence P0", () => {
       ).rejects.toBeInstanceOf(InvalidTemplateDataError);
 
       expect(storage.get(STORAGE_KEY)).toBe(seedString);
+    });
+  });
+
+  describe("synchronous copy helpers", () => {
+    it("reads a saved template back by id", () => {
+      storage.set(
+        STORAGE_KEY,
+        JSON.stringify([{ ...buildTemplate(), id: "104" }])
+      );
+
+      expect(readStoredTemplate("104")?.id).toBe("104");
+      expect(readStoredTemplate("missing")).toBeNull();
+    });
+
+    it("returns null instead of throwing on unusable storage", () => {
+      expect(readStoredTemplate("template-p0")).toBeNull();
+
+      storage.set(STORAGE_KEY, "{not valid json");
+      expect(readStoredTemplate("template-p0")).toBeNull();
+
+      storage.set(STORAGE_KEY, JSON.stringify({ not: "an array" }));
+      expect(readStoredTemplate("template-p0")).toBeNull();
+
+      storage.set(STORAGE_KEY, JSON.stringify([{ id: "template-p0" }]));
+      expect(readStoredTemplate("template-p0")).toBeNull();
+    });
+
+    it("removes only the requested template", () => {
+      storage.set(
+        STORAGE_KEY,
+        JSON.stringify([
+          buildTemplate(),
+          { ...buildTemplate(), id: "other" },
+        ])
+      );
+
+      removeStoredTemplate("template-p0");
+
+      const stored = JSON.parse(storage.get(STORAGE_KEY)!);
+      expect(stored).toHaveLength(1);
+      expect(stored[0].id).toBe("other");
+    });
+
+    it("leaves unusable storage untouched", () => {
+      storage.set(STORAGE_KEY, "{not valid json");
+
+      removeStoredTemplate("template-p0");
+
+      expect(storage.get(STORAGE_KEY)).toBe("{not valid json");
     });
   });
 });

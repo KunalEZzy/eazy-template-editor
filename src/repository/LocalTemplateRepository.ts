@@ -13,6 +13,103 @@ import { isTemplate } from "../domain/template/template.validation";
 
 const STORAGE_KEY = "eazy-template-editor:templates";
 
+function getLocalStorage(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.localStorage;
+  } catch {
+    // Access throws in some privacy modes.
+    return null;
+  }
+}
+
+/**
+ * Read one locally saved template synchronously, or null when it was never
+ * saved (or the stored row is unusable).
+ *
+ * The asynchronous repository API cannot be used on the Master EDIT bootstrap
+ * path: the template has to be chosen while the EDITOR_INIT message is being
+ * applied, and `applyEditorInitMessage` is synchronous so it stays unit
+ * testable without simulating postMessage.
+ */
+export function readStoredTemplate(id: string): Template | null {
+  const storage = getLocalStorage();
+
+  if (!storage) {
+    return null;
+  }
+
+  let raw: string | null;
+
+  try {
+    raw = storage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+
+  if (!raw) {
+    return null;
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+
+  if (!Array.isArray(parsed)) {
+    return null;
+  }
+
+  const found = parsed.find(
+    (entry) => isTemplate(entry) && entry.id === id
+  );
+
+  return found && isTemplate(found) ? found : null;
+}
+
+/**
+ * Drop a locally saved template. Called once its content exists in the
+ * database, so a browser copy can never shadow a newer database row.
+ */
+export function removeStoredTemplate(id: string): void {
+  const storage = getLocalStorage();
+
+  if (!storage) {
+    return;
+  }
+
+  let raw: string | null;
+
+  try {
+    raw = storage.getItem(STORAGE_KEY);
+  } catch {
+    return;
+  }
+
+  if (!raw) {
+    return;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) {
+      return;
+    }
+
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(
+        parsed.filter((entry) => !isTemplate(entry) || entry.id !== id)
+      )
+    );
+  } catch {
+    // Nothing actionable: an unreadable row is also never restored.
+  }
+}
+
 export class LocalTemplateRepository
   implements TemplateRepository
 {
@@ -136,12 +233,18 @@ export class LocalTemplateRepository
 
     const existing = templates[index];
 
-    if (existing.version !== input.version) {
-      throw new Error(
-        "Template has been modified by another session"
-      );
-    }
-
+    /*
+     * Last write wins. The incoming `version` is advisory only, because this
+     * store is not the system of record and three independent counters can
+     * never agree: this local row (bumped once per local save), the editor
+     * store, and Laravel, which emits `version: 1` for every template it
+     * hands back (`poster_template` has no version column - see
+     * LegacyTemplateAdapter). Every `EDITOR_INIT` / `SAVE_SUCCESS` therefore
+     * resets the store to 1 while this row keeps climbing, so a strict check
+     * made Save fail permanently for any template after two local saves or one
+     * Laravel round trip - a false conflict, never a real concurrent editor.
+     * The version stays monotonic so it remains a useful change counter.
+     */
     const updated: Template = {
       ...existing,
 

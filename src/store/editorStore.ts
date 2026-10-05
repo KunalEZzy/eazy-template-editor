@@ -56,6 +56,7 @@ const initialState: EditorState = {
   error: null,
   submitStatus: "idle",
   submitMessage: null,
+  restoredLocalCopy: false,
   past: [],
   future: [],
 };
@@ -85,6 +86,8 @@ setTemplate: (template) =>
     setInitialized: (isInitialized) => set({ isInitialized }),
 
     setEditorMode: (editorMode) => set({ editorMode }),
+
+    setRestoredLocalCopy: (restoredLocalCopy) => set({ restoredLocalCopy }),
 
     setPreviewData: (previewData) => set({ previewData }),
 
