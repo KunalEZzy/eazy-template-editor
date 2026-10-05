@@ -27,6 +27,9 @@ export function EditorLayout() {
   const isSaving = useEditorStore((state) => state.isSaving);
   const isDirty = useEditorStore((state) => state.isDirty);
   const editorMode = useEditorStore((state) => state.editorMode);
+  const restoredLocalCopy = useEditorStore(
+    (state) => state.restoredLocalCopy
+  );
   const temporaryBackgroundImageUrl = useEditorStore(
     (state) => state.temporaryBackgroundImageUrl
   );
@@ -271,6 +274,28 @@ export function EditorLayout() {
           <span>
             Not submitted yet. This draft is kept in this browser only — press
             Submit Template to save it to the database and keep it permanently.
+          </span>
+        </div>
+      )}
+
+      {restoredLocalCopy && editorMode === "master-edit" && (
+        <div
+          role="status"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "8px 20px",
+            background: "#fef3c7",
+            borderBottom: `1px solid ${tokens.border}`,
+            color: "#92400e",
+            fontSize: "13px",
+            textAlign: "center",
+          }}
+        >
+          <span>
+            Press Save Template to keep the changes locally or Press Submit Template to keep it permanently.
           </span>
         </div>
       )}

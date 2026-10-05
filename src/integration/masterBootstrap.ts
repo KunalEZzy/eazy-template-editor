@@ -14,8 +14,41 @@ import {
   loadMasterCreateDraft,
   saveMasterCreateDraft,
 } from "./masterCreateDraft";
+import { readStoredTemplate } from "../repository/LocalTemplateRepository";
+import type { Template } from "../domain/template/template.types";
 
 const PARENT_ORIGIN = import.meta.env.VITE_EDITOR_PARENT_ORIGIN;
+
+/**
+ * Return this browser's own saved copy of an existing template when it is newer
+ * than the database row, otherwise null.
+ *
+ * "Save Template" writes to localStorage, but Master EDIT otherwise re-hydrates
+ * from Laravel on every load, so without this the local save would be
+ * invisible: the work would silently disappear on the next reload. The
+ * comparison is against the row's real `updated_at` (forwarded by
+ * LegacyTemplateAdapter), so a database edit made anywhere else still wins.
+ */
+export function pickNewerLocalTemplate(
+  persistedTemplate: Template
+): Template | null {
+  const stored = readStoredTemplate(persistedTemplate.id);
+
+  if (!stored) {
+    return null;
+  }
+
+  const storedAt = Date.parse(stored.updatedAt);
+  const persistedAt = Date.parse(persistedTemplate.updatedAt);
+
+  // An unusable timestamp on either side means "cannot prove it is newer", so
+  // the database row stays authoritative.
+  if (Number.isNaN(storedAt) || Number.isNaN(persistedAt)) {
+    return null;
+  }
+
+  return storedAt > persistedAt ? stored : null;
+}
 
 /**
  * Apply a validated EDITOR_INIT message to the store.
@@ -29,6 +62,8 @@ export function applyEditorInitMessage(message: EditorInitMessage): void {
     setPreviewData,
     setCreator,
     setEditorMode,
+    setRestoredLocalCopy,
+    markDirty,
   } = useEditorStore.getState();
 
   setError(null);
@@ -46,6 +81,7 @@ export function applyEditorInitMessage(message: EditorInitMessage): void {
   if (message.payload.template === null) {
     setTemplate(loadMasterCreateDraft() ?? createEmptyTemplate());
     setEditorMode("master-create");
+    setRestoredLocalCopy(false);
     return;
   }
 
@@ -53,8 +89,18 @@ export function applyEditorInitMessage(message: EditorInitMessage): void {
   // draft belongs to a different (already submitted) session.
   clearMasterCreateDraft();
 
-  setTemplate(message.payload.template);
+  const localCopy = pickNewerLocalTemplate(message.payload.template);
+
+  setTemplate(localCopy ?? message.payload.template);
   setEditorMode("master-edit");
+
+  // A restored browser copy is not in the database, so it stays dirty and the
+  // banner must say so until the user submits it.
+  setRestoredLocalCopy(localCopy !== null);
+
+  if (localCopy) {
+    markDirty();
+  }
 
   // setTemplate clears creator; restore the original creator for the loaded
   // template so the info box keeps showing who created it.
